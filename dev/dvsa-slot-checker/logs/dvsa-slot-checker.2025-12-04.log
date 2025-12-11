@@ -1,0 +1,203 @@
+2025-12-04 22:13:35.238 [main] INFO  com.dvsachecker.config.AppConfig - Configuration loaded successfully
+2025-12-04 22:19:31.981 [main] INFO  com.dvsachecker.config.AppConfig - Configuration loaded successfully
+2025-12-04 22:27:00.174 [main] INFO  com.dvsachecker.config.AppConfig - Configuration loaded successfully
+2025-12-04 22:27:00.177 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Starting ===
+2025-12-04 22:27:00.177 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing WebDriver
+2025-12-04 22:27:02.422 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Using chromedriver 142.0.7444.175 (resolved driver for Chrome 142)
+2025-12-04 22:27:02.498 [main] INFO  i.g.bonigarcia.wdm.online.Downloader - Downloading https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/142.0.7444.175/win64/chromedriver-win64.zip
+2025-12-04 22:27:03.460 [main] INFO  i.g.bonigarcia.wdm.online.Downloader - Extracting driver from compressed file chromedriver-win64.zip
+2025-12-04 22:27:03.617 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Exporting webdriver.chrome.driver as C:\Users\rz090\.cache\selenium\chromedriver\win64\142.0.7444.175\chromedriver.exe
+2025-12-04 22:27:03.622 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Running in headless mode
+2025-12-04 22:27:06.648 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver initialized successfully
+2025-12-04 22:27:06.648 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing Quartz scheduler
+2025-12-04 22:27:06.987 [main] INFO  c.d.repository.StateRepository - Database initialized at: jdbc:sqlite:dvsa-slots.db
+2025-12-04 22:27:07.107 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Scheduler configured with polling interval: 30s
+2025-12-04 22:27:07.108 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Performing initial authentication
+2025-12-04 22:27:07.108 [main] INFO  c.dvsachecker.service.SessionManager - Initiating DVSA authentication
+2025-12-04 22:27:28.192 [main] ERROR c.dvsachecker.service.SessionManager - Authentication timeout - page elements not found
+org.openqa.selenium.TimeoutException: Expected condition failed: waiting for presence of element located by: By.id: driving-licence-number (tried for 15 second(s) with 500 milliseconds interval)
+	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:229)
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:43)
+	at com.dvsachecker.DVSASlotCheckerApp.start(DVSASlotCheckerApp.java:135)
+	at com.dvsachecker.DVSASlotCheckerApp.main(DVSASlotCheckerApp.java:241)
+Caused by: org.openqa.selenium.NoSuchElementException: no such element: Unable to locate element: {"method":"css selector","selector":"#driving\-licence\-number"}
+  (Session info: chrome=142.0.7444.176)
+For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Build info: version: '4.16.1', revision: '9b4c83354e'
+System info: os.name: 'Windows 11', os.arch: 'amd64', os.version: '10.0', java.version: '17.0.17'
+Driver info: org.openqa.selenium.chrome.ChromeDriver
+Command: [8745d62cc7bbfa24bfa329a40f751dec, findElement {using=id, value=driving-licence-number}]
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 142.0.7444.176, chrome: {chromedriverVersion: 142.0.7444.175 (302067f14a4..., userDataDir: C:\Users\rz090\AppData\Loca...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:57080}, goog:processID: 42340, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: windows, proxy: Proxy(), se:cdp: ws://localhost:57080/devtoo..., se:cdpVersion: 142.0.7444.176, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: 8745d62cc7bbfa24bfa329a40f751dec
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.openqa.selenium.remote.codec.w3c.W3CHttpResponseCodec.createException(W3CHttpResponseCodec.java:200)
+	at org.openqa.selenium.remote.codec.w3c.W3CHttpResponseCodec.decode(W3CHttpResponseCodec.java:133)
+	at org.openqa.selenium.remote.codec.w3c.W3CHttpResponseCodec.decode(W3CHttpResponseCodec.java:52)
+	at org.openqa.selenium.remote.HttpCommandExecutor.execute(HttpCommandExecutor.java:191)
+	at org.openqa.selenium.remote.service.DriverCommandExecutor.invokeExecute(DriverCommandExecutor.java:200)
+	at org.openqa.selenium.remote.service.DriverCommandExecutor.execute(DriverCommandExecutor.java:175)
+	at org.openqa.selenium.remote.RemoteWebDriver.execute(RemoteWebDriver.java:523)
+	at org.openqa.selenium.remote.ElementLocation$ElementFinder$2.findElement(ElementLocation.java:165)
+	at org.openqa.selenium.remote.ElementLocation.findElement(ElementLocation.java:59)
+	at org.openqa.selenium.remote.RemoteWebDriver.findElement(RemoteWebDriver.java:360)
+	at org.openqa.selenium.remote.RemoteWebDriver.findElement(RemoteWebDriver.java:354)
+	at org.openqa.selenium.support.ui.ExpectedConditions$6.apply(ExpectedConditions.java:171)
+	at org.openqa.selenium.support.ui.ExpectedConditions$6.apply(ExpectedConditions.java:168)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:204)
+	... 3 common frames omitted
+2025-12-04 22:27:28.196 [main] ERROR com.dvsachecker.DVSASlotCheckerApp - Application startup failed
+com.dvsachecker.service.SessionManager$SessionException: Authentication failed: timeout
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:105)
+	at com.dvsachecker.DVSASlotCheckerApp.start(DVSASlotCheckerApp.java:135)
+	at com.dvsachecker.DVSASlotCheckerApp.main(DVSASlotCheckerApp.java:241)
+Caused by: org.openqa.selenium.TimeoutException: Expected condition failed: waiting for presence of element located by: By.id: driving-licence-number (tried for 15 second(s) with 500 milliseconds interval)
+	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:229)
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:43)
+	... 2 common frames omitted
+Caused by: org.openqa.selenium.NoSuchElementException: no such element: Unable to locate element: {"method":"css selector","selector":"#driving\-licence\-number"}
+  (Session info: chrome=142.0.7444.176)
+For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Build info: version: '4.16.1', revision: '9b4c83354e'
+System info: os.name: 'Windows 11', os.arch: 'amd64', os.version: '10.0', java.version: '17.0.17'
+Driver info: org.openqa.selenium.chrome.ChromeDriver
+Command: [8745d62cc7bbfa24bfa329a40f751dec, findElement {using=id, value=driving-licence-number}]
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 142.0.7444.176, chrome: {chromedriverVersion: 142.0.7444.175 (302067f14a4..., userDataDir: C:\Users\rz090\AppData\Loca...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:57080}, goog:processID: 42340, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: windows, proxy: Proxy(), se:cdp: ws://localhost:57080/devtoo..., se:cdpVersion: 142.0.7444.176, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: 8745d62cc7bbfa24bfa329a40f751dec
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:500)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:481)
+	at org.openqa.selenium.remote.codec.w3c.W3CHttpResponseCodec.createException(W3CHttpResponseCodec.java:200)
+	at org.openqa.selenium.remote.codec.w3c.W3CHttpResponseCodec.decode(W3CHttpResponseCodec.java:133)
+	at org.openqa.selenium.remote.codec.w3c.W3CHttpResponseCodec.decode(W3CHttpResponseCodec.java:52)
+	at org.openqa.selenium.remote.HttpCommandExecutor.execute(HttpCommandExecutor.java:191)
+	at org.openqa.selenium.remote.service.DriverCommandExecutor.invokeExecute(DriverCommandExecutor.java:200)
+	at org.openqa.selenium.remote.service.DriverCommandExecutor.execute(DriverCommandExecutor.java:175)
+	at org.openqa.selenium.remote.RemoteWebDriver.execute(RemoteWebDriver.java:523)
+	at org.openqa.selenium.remote.ElementLocation$ElementFinder$2.findElement(ElementLocation.java:165)
+	at org.openqa.selenium.remote.ElementLocation.findElement(ElementLocation.java:59)
+	at org.openqa.selenium.remote.RemoteWebDriver.findElement(RemoteWebDriver.java:360)
+	at org.openqa.selenium.remote.RemoteWebDriver.findElement(RemoteWebDriver.java:354)
+	at org.openqa.selenium.support.ui.ExpectedConditions$6.apply(ExpectedConditions.java:171)
+	at org.openqa.selenium.support.ui.ExpectedConditions$6.apply(ExpectedConditions.java:168)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:204)
+	... 3 common frames omitted
+2025-12-04 22:27:28.197 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Shutting down application
+2025-12-04 22:27:28.513 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver closed
+2025-12-04 22:27:28.513 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Stopped ===
+2025-12-04 22:27:28.514 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - Shutting down application
+2025-12-04 22:27:28.514 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver closed
+2025-12-04 22:27:28.514 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Stopped ===
+2025-12-04 22:41:06.099 [main] INFO  com.dvsachecker.config.AppConfig - Configuration loaded successfully
+2025-12-04 22:41:06.102 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Starting ===
+2025-12-04 22:41:06.102 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing WebDriver
+2025-12-04 22:41:06.354 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Using chromedriver 142.0.7444.175 (resolved driver for Chrome 142)
+2025-12-04 22:41:06.386 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Exporting webdriver.chrome.driver as C:\Users\rz090\.cache\selenium\chromedriver\win64\142.0.7444.175\chromedriver.exe
+2025-12-04 22:41:06.392 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Running in headless mode
+2025-12-04 22:41:07.433 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver initialized successfully
+2025-12-04 22:41:07.433 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing Quartz scheduler
+2025-12-04 22:41:07.624 [main] INFO  c.d.repository.StateRepository - Database initialized at: jdbc:sqlite:dvsa-slots.db
+2025-12-04 22:41:07.700 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Scheduler configured with polling interval: 30s
+2025-12-04 22:41:07.700 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Performing initial authentication
+2025-12-04 22:41:07.701 [main] INFO  c.dvsachecker.service.SessionManager - Initiating DVSA authentication via multi-step wizard
+2025-12-04 22:41:08.009 [main] DEBUG c.dvsachecker.service.SessionManager - Step 1: Selecting car test type
+2025-12-04 22:41:28.614 [main] ERROR c.dvsachecker.service.SessionManager - Authentication timeout - page elements not found
+org.openqa.selenium.TimeoutException: Expected condition failed: waiting for element to be clickable: By.linkText: Car (manual and automatic) (tried for 15 second(s) with 500 milliseconds interval)
+Build info: version: '4.16.1', revision: '9b4c83354e'
+System info: os.name: 'Windows 11', os.arch: 'amd64', os.version: '10.0', java.version: '17.0.17'
+Driver info: org.openqa.selenium.chrome.ChromeDriver
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 142.0.7444.176, chrome: {chromedriverVersion: 142.0.7444.175 (302067f14a4..., userDataDir: C:\Users\rz090\AppData\Loca...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:64735}, goog:processID: 16124, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: windows, proxy: Proxy(), se:cdp: ws://localhost:64735/devtoo..., se:cdpVersion: 142.0.7444.176, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: bd2d71d107beae9d88562ea8f98f0cfa
+	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:229)
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:42)
+	at com.dvsachecker.DVSASlotCheckerApp.start(DVSASlotCheckerApp.java:135)
+	at com.dvsachecker.DVSASlotCheckerApp.main(DVSASlotCheckerApp.java:241)
+2025-12-04 22:41:28.617 [main] ERROR com.dvsachecker.DVSASlotCheckerApp - Application startup failed
+com.dvsachecker.service.SessionManager$SessionException: Authentication failed: timeout
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:134)
+	at com.dvsachecker.DVSASlotCheckerApp.start(DVSASlotCheckerApp.java:135)
+	at com.dvsachecker.DVSASlotCheckerApp.main(DVSASlotCheckerApp.java:241)
+Caused by: org.openqa.selenium.TimeoutException: Expected condition failed: waiting for element to be clickable: By.linkText: Car (manual and automatic) (tried for 15 second(s) with 500 milliseconds interval)
+Build info: version: '4.16.1', revision: '9b4c83354e'
+System info: os.name: 'Windows 11', os.arch: 'amd64', os.version: '10.0', java.version: '17.0.17'
+Driver info: org.openqa.selenium.chrome.ChromeDriver
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 142.0.7444.176, chrome: {chromedriverVersion: 142.0.7444.175 (302067f14a4..., userDataDir: C:\Users\rz090\AppData\Loca...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:64735}, goog:processID: 16124, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: windows, proxy: Proxy(), se:cdp: ws://localhost:64735/devtoo..., se:cdpVersion: 142.0.7444.176, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: bd2d71d107beae9d88562ea8f98f0cfa
+	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:229)
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:42)
+	... 2 common frames omitted
+2025-12-04 22:41:28.617 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Shutting down application
+2025-12-04 22:41:28.765 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver closed
+2025-12-04 22:41:28.765 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Stopped ===
+2025-12-04 22:41:28.766 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - Shutting down application
+2025-12-04 22:41:28.766 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver closed
+2025-12-04 22:41:28.766 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Stopped ===
+2025-12-04 22:58:51.998 [main] INFO  com.dvsachecker.config.AppConfig - Configuration loaded successfully
+2025-12-04 22:58:52.002 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Starting ===
+2025-12-04 22:58:52.002 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing WebDriver
+2025-12-04 22:58:52.263 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Using chromedriver 142.0.7444.175 (resolved driver for Chrome 142)
+2025-12-04 22:58:52.287 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Exporting webdriver.chrome.driver as C:\Users\rz090\.cache\selenium\chromedriver\win64\142.0.7444.175\chromedriver.exe
+2025-12-04 22:58:52.294 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Running in headless mode
+2025-12-04 22:58:53.451 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver initialized successfully
+2025-12-04 22:58:53.452 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing Quartz scheduler
+2025-12-04 22:58:53.651 [main] INFO  c.d.repository.StateRepository - Database initialized at: jdbc:sqlite:dvsa-slots.db
+2025-12-04 22:58:53.737 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Scheduler configured with polling interval: 30s
+2025-12-04 22:58:53.737 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Performing initial authentication
+2025-12-04 22:58:53.737 [main] INFO  c.dvsachecker.service.SessionManager - Initiating DVSA authentication via multi-step wizard
+2025-12-04 22:58:54.020 [main] DEBUG c.dvsachecker.service.SessionManager - Step 1: Selecting car test type
+2025-12-04 22:59:14.639 [main] ERROR c.dvsachecker.service.SessionManager - Authentication timeout - page elements not found
+org.openqa.selenium.TimeoutException: Expected condition failed: waiting for element to be clickable: By.linkText: Car (manual and automatic) (tried for 15 second(s) with 500 milliseconds interval)
+Build info: version: '4.16.1', revision: '9b4c83354e'
+System info: os.name: 'Windows 11', os.arch: 'amd64', os.version: '10.0', java.version: '17.0.17'
+Driver info: org.openqa.selenium.chrome.ChromeDriver
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 142.0.7444.176, chrome: {chromedriverVersion: 142.0.7444.175 (302067f14a4..., userDataDir: C:\Users\rz090\AppData\Loca...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:63397}, goog:processID: 44004, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: windows, proxy: Proxy(), se:cdp: ws://localhost:63397/devtoo..., se:cdpVersion: 142.0.7444.176, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: 11645a6e279d0f87792cedd739ce4492
+	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:229)
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:42)
+	at com.dvsachecker.DVSASlotCheckerApp.start(DVSASlotCheckerApp.java:135)
+	at com.dvsachecker.DVSASlotCheckerApp.main(DVSASlotCheckerApp.java:241)
+2025-12-04 22:59:14.642 [main] ERROR com.dvsachecker.DVSASlotCheckerApp - Application startup failed
+com.dvsachecker.service.SessionManager$SessionException: Authentication failed: timeout
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:134)
+	at com.dvsachecker.DVSASlotCheckerApp.start(DVSASlotCheckerApp.java:135)
+	at com.dvsachecker.DVSASlotCheckerApp.main(DVSASlotCheckerApp.java:241)
+Caused by: org.openqa.selenium.TimeoutException: Expected condition failed: waiting for element to be clickable: By.linkText: Car (manual and automatic) (tried for 15 second(s) with 500 milliseconds interval)
+Build info: version: '4.16.1', revision: '9b4c83354e'
+System info: os.name: 'Windows 11', os.arch: 'amd64', os.version: '10.0', java.version: '17.0.17'
+Driver info: org.openqa.selenium.chrome.ChromeDriver
+Capabilities {acceptInsecureCerts: false, browserName: chrome, browserVersion: 142.0.7444.176, chrome: {chromedriverVersion: 142.0.7444.175 (302067f14a4..., userDataDir: C:\Users\rz090\AppData\Loca...}, fedcm:accounts: true, goog:chromeOptions: {debuggerAddress: localhost:63397}, goog:processID: 44004, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: windows, proxy: Proxy(), se:cdp: ws://localhost:63397/devtoo..., se:cdpVersion: 142.0.7444.176, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: 11645a6e279d0f87792cedd739ce4492
+	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:229)
+	at com.dvsachecker.service.SessionManager.authenticate(SessionManager.java:42)
+	... 2 common frames omitted
+2025-12-04 22:59:14.642 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Shutting down application
+2025-12-04 22:59:14.774 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver closed
+2025-12-04 22:59:14.774 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Stopped ===
+2025-12-04 22:59:14.774 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - Shutting down application
+2025-12-04 22:59:14.774 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver closed
+2025-12-04 22:59:14.774 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Stopped ===
+2025-12-04 23:02:41.314 [main] INFO  com.dvsachecker.config.AppConfig - Configuration loaded successfully
+2025-12-04 23:02:41.319 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - === DVSA Slot Checker Starting ===
+2025-12-04 23:02:41.320 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing WebDriver
+2025-12-04 23:02:41.629 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Using chromedriver 142.0.7444.175 (resolved driver for Chrome 142)
+2025-12-04 23:02:41.667 [main] INFO  i.g.bonigarcia.wdm.WebDriverManager - Exporting webdriver.chrome.driver as C:\Users\rz090\.cache\selenium\chromedriver\win64\142.0.7444.175\chromedriver.exe
+2025-12-04 23:02:41.676 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Running in headless mode
+2025-12-04 23:02:42.736 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - WebDriver initialized successfully
+2025-12-04 23:02:42.736 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Initializing Quartz scheduler
+2025-12-04 23:02:42.944 [main] INFO  c.d.repository.StateRepository - Database initialized at: jdbc:sqlite:dvsa-slots.db
+2025-12-04 23:02:43.028 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Scheduler configured with polling interval: 30s
+2025-12-04 23:02:43.028 [main] INFO  com.dvsachecker.DVSASlotCheckerApp - Performing initial authentication
+2025-12-04 23:02:43.028 [main] INFO  c.dvsachecker.service.SessionManager - Initiating DVSA authentication via multi-step wizard
+2025-12-04 23:02:43.302 [main] DEBUG c.dvsachecker.service.SessionManager - Step 1: Selecting car test type
+2025-12-04 23:02:55.313 [Thread-0] INFO  com.dvsachecker.DVSASlotCheckerApp - Shutting down application
