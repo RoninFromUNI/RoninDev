@@ -1,0 +1,337 @@
+================================================================================
+CYBERCLONE - CREDITS & ATTRIBUTION
+================================================================================
+Student: Riyaz Ismail (2215624)
+Course: CS3005 Coursework A
+Institution: Brunel University London
+Date: November 2025
+
+================================================================================
+YOUTUBE VIDEO TUTORIALS
+================================================================================
+
+[1] Velvary. "Adding Collisions For Your Tilemaps and 2D Character - Unity 
+    Tutorial." YouTube, 24 Nov 2025.
+    https://www.youtube.com/watch?v=c2oSktomBHLW4
+    Used for: Tilemap collision setup with Composite Collider 2D
+
+[2] Sasquatch B Studios. "TOP DOWN Movement - Unity Tutorial." YouTube.
+    https://www.youtube.com/watch?v=RN3yuCvzsL4
+    Used for: Player movement controller implementation
+
+[3] Penutbumlo. "INSANELY Smooth pixel ATTACK Animation Tutorial." YouTube.
+    https://www.youtube.com/watch?v=KgSSTa-TFRc
+    Used for: Smooth animation techniques in Aseprite
+
+[4] Syloe. "MAKING ISOMETRIC TILEMAP in Unity 2019! (Tutorial)." YouTube,
+    21 Nov 2025.
+    https://youtu.be/IW7f4Zg21YY
+    Used for: Isometric tilemap configuration and setup
+
+[5] Contraband. "4 Unity C# Coding Tips!" YouTube, 21 Nov 2025.
+    https://youtube.com/shorts/FTOpJBoNL4PIs+9FzDTfCjtrwSlzsdb
+    Used for: C# coding best practices and optimisation
+
+[6] Game Dev Beginner. "Coroutines in Unity (how & when to use them)." 
+    YouTube.
+    https://youtu.be/kIJ2V0rQGnM
+    Used for: Understanding coroutine implementation for scene transitions
+
+[7] Unity. "C# Enumerations in Unity! - Beginner Scripting Tutorial." YouTube.
+    https://youtu.be/LAE2aBCMYlw
+    Used for: Enum-based state machine implementation
+
+[8] Tofami. "Preprocessor Directives in Unity - Episode#26." YouTube.
+    https://youtu.be/auTOHvOfGwM
+    Used for: Understanding #if UNITY_EDITOR directives
+
+[9] Devduff. "State Based AI Behavior using C# and Visual State Machine made 
+    with..." YouTube.
+    https://youtu.be/lqt_LkkMyNPc4
+    Used for: Boss AI finite state machine architecture
+
+[10] [Additional video about character attack/weapon system]
+     https://youtu.be/uFP9NEhttip
+     Note: Referenced for weapon-based attack mechanics
+
+[11] Dani Krossing. "HOW TO CREATE TILEMAPS IN UNITY 🗺️ | Tile maps & Tile 
+     Palettes in..." YouTube.
+     https://youtu.be/tEQw-YKQndB?si=ML_XfYCkekM_JungZWe
+     Used for: Tilemap creation and Tile Palette setup
+
+[12] United Top Tech. "How to Export Unity Game to Windows Desktop Tutorial." 
+     YouTube.
+     Used for: Building and exporting Unity projects to Windows executable
+
+[13] Unity. "How to Export your Unity Game and Play it on Your Desktop 
+     (Official Unity Tutorial)." YouTube, 183K views.
+     Used for: Official Unity build process and deployment workflow
+
+[14] "Unity 2D Animations in SECONDS? - Aseprite..." YouTube.
+     Used for: Aseprite Importer package workflow demonstration
+
+[15] Code Monkey. "Quick Tip: Use Enums for State handling (DON'T USE STRINGS 
+     - Unity Tutorial)." YouTube, 53K views.
+     Used for: Enum-based state management best practices
+
+[16] Sasquatch B Studios. "How To Add Sound Effects the RIGHT Way | Unity 
+     Tutorial." YouTube, 99K views.
+     Used for: AudioSource implementation and sound effect integration
+
+[17] Contraband. "4 Unity C# Coding Tips!" YouTube (via @contraband.software).
+     Used for: SerializeField attribute and Inspector best practices
+
+[18] CasanisPlays. "2D Prototyping in Unity - Tutorial - Platformer - Player 
+     Animation." YouTube, 21.6K subscribers.
+     Used for: 2D character animation state machine setup
+
+[19] Unity. "How to use Isometric Tilemap in Unity 2018.3! (Tutorial)." 
+     YouTube, 334K views.
+     Used for: Official isometric tilemap configuration guide
+
+[20] Sunny Valley Studio. "Unity 6 REMOVED velocity from Rigidbody2D !" 
+     YouTube, 9.2K views.
+     Used for: Understanding Rigidbody2D.velocity deprecation and 
+     linearVelocity migration
+
+[21] Unity. "Creating 2D Player Movement for Isometric Games with Unity 
+     2018.3! (Tutorial)." YouTube, 136K views.
+     Used for: Isometric player movement implementation
+
+================================================================================
+AUDIO RESOURCES
+================================================================================
+
+Epidemic Sound
+- Purpose: Background music and sound effects
+- Licence: Educational/Academic Use
+- URL: https://www.epidemicsound.com
+- Assets used: Background music tracks, footstep sounds, attack sound effects,
+  enemy audio cues
+
+================================================================================
+VISUAL ASSET CREATION TOOLS
+================================================================================
+
+Aseprite (v1.3+)
+- Purpose: Pixel art sprite creation and frame-by-frame animation
+- Licence: Personal Licence
+- URL: https://www.aseprite.org
+- Usage: All character sprites, enemy sprites, boss animations, environmental
+  assets created using Aseprite
+
+2D Aseprite Importer Unity Package
+- Automatic .ase/.aseprite file import into Unity
+- Function: Automatic layer parsing, pivot point assignment, frame data
+  extraction, spritesheet generation with metadata for Unity animation system
+- Package: com.unity.2d.aseprite (v1.0.1)
+- Eliminates manual sprite slicing and animation clip setup
+
+================================================================================
+DEVELOPMENT TOOLS & ENVIRONMENT
+================================================================================
+
+Unity Engine (Version 2022.3+ LTS)
+- Game engine for all development
+- Licence: Unity Personal (Educational Use)
+- URL: https://unity.com
+
+Visual Studio 2022
+- IDE for C# script development
+- Licence: Community Edition
+- URL: https://visualstudio.microsoft.com
+
+IntelliJ IDEA
+- Alternative IDE used for code editing
+- Licence: Educational Licence
+- URL: https://www.jetbrains.com/idea
+
+================================================================================
+UNITY ASSET STORE / PACKAGES
+================================================================================
+
+2D Aseprite Importer (Version 1.0.1)
+- Package Name: com.unity.2d.aseprite
+- Source: Unity Package Manager
+- Purpose: Automated import of .ase and .aseprite files into Unity with proper
+  metadata parsing, layer structure extraction, spritesheet generation, and
+  animation clip creation
+- Documentation: https://docs.unity3d.com/Packages/com.unity.2d.aseprite@1.0/
+- Licence: Unity Package Licence
+- Usage: All Aseprite sprite imports utilise this package for automatic
+  conversion to Unity-compatible sprite assets
+
+TextMeshPro (if used for UI text)
+- Built-in Unity package for advanced text rendering
+
+================================================================================
+CODE ATTRIBUTION & METHODOLOGIES
+================================================================================
+
+Scene Management System (attemptToDesignGameFlow.cs)
+- Singleton pattern implementation
+- Coroutine-based scene transitions with fade effects
+- Source: Combination of Unity documentation and YouTube tutorials [6], [7], [8]
+- Original implementation by me
+
+Boss AI State Machine (isoBossController.cs)
+- Finite state machine pattern with enum-driven behaviour
+- Source: YouTube tutorial [9] methodology adapted for project requirements
+- Original implementation by me
+
+Player Movement System
+- WASD input with mouse-based aiming
+- Source: YouTube tutorial [2] methodology adapted for isometric projection
+- Original implementation by me
+
+Collision Detection
+- Tilemap Collider 2D with Composite Collider 2D optimisation
+- Source: YouTube tutorial [1]
+- Configured by me for isometric level design
+
+Animation System
+- Manually created animation clips using Aseprite sprite frames
+- Transition logic checking input magnitude instead of velocity
+- Methodology developed through iterative debugging and my implementation
+
+================================================================================
+TECHNICAL CONCEPTS & LEARNING RESOURCES
+================================================================================
+
+Unity API Documentation
+- URL: https://docs.unity3d.com
+- Used for: Method signatures, component references, system architecture
+
+C# Programming Documentation
+- URL: https://learn.microsoft.com/en-us/dotnet/csharp/
+- Used for: Language syntax, design patterns, best practices
+
+Singleton Pattern
+- Unity DontDestroyOnLoad: https://docs.unity3d.com/ScriptReference/Object.DontDestroyOnLoad.html
+- C# Singleton Pattern: https://learn.microsoft.com/en-us/dotnet/csharp/patterns/singleton
+- Used in: attemptToDesignGameFlow.cs for scene persistence
+
+Coroutines & IEnumerator
+- Unity Coroutines: https://docs.unity3d.com/Manual/Coroutines.html
+- StartCoroutine: https://docs.unity3d.com/ScriptReference/MonoBehaviour.StartCoroutine.html
+- Used for: Non-blocking scene transitions and fade effects
+
+Scene Management
+- SceneManager: https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.html
+- LoadScene: https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.LoadScene.html
+- GetActiveScene: https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.GetActiveScene.html
+- Used in: Level progression and restart functionality
+
+Physics2D System
+- Physics2D.OverlapCircle: https://docs.unity3d.com/ScriptReference/Physics2D.OverlapCircle.html
+- Layer Collision Matrix: https://docs.unity3d.com/Manual/class-TagManager.html
+- Tilemap Collider 2D: https://docs.unity3d.com/Manual/class-TilemapCollider2D.html
+- Composite Collider 2D: https://docs.unity3d.com/Manual/class-CompositeCollider2D.html
+- Source: Unity documentation + my implementation
+
+Rigidbody2D & Movement
+- Rigidbody2D: https://docs.unity3d.com/ScriptReference/Rigidbody2D.html
+- linearVelocity (Unity 6): https://docs.unity3d.com/ScriptReference/Rigidbody2D-linearVelocity.html
+- velocity (deprecated): https://docs.unity3d.com/ScriptReference/Rigidbody2D-velocity.html
+- Used for: Player and enemy movement systems
+
+Input System
+- Input.GetKey: https://docs.unity3d.com/ScriptReference/Input.GetKey.html
+- Input.mousePosition: https://docs.unity3d.com/ScriptReference/Input-mousePosition.html
+- Camera.ScreenToWorldPoint: https://docs.unity3d.com/ScriptReference/Camera.ScreenToWorldPoint.html
+- Used for: WASD movement and mouse-based aiming
+
+Audio System Integration
+- AudioSource: https://docs.unity3d.com/ScriptReference/AudioSource.html
+- AudioClip: https://docs.unity3d.com/ScriptReference/AudioClip.html
+- Audio Spatial Blend: https://docs.unity3d.com/Manual/class-AudioSource.html
+- Used for: Background music, footstep sounds with pitch variation, attack SFX
+- Source: Unity documentation + my implementation
+
+Animator & Animation System
+- Animator Component: https://docs.unity3d.com/Manual/class-Animator.html
+- Animation Clips: https://docs.unity3d.com/Manual/AnimationClips.html
+- Animator Parameters: https://docs.unity3d.com/Manual/AnimationParameters.html
+- Used for: Character, enemy, and boss animation state machines
+
+Vector2 & Mathematical Operations
+- Vector2: https://docs.unity3d.com/ScriptReference/Vector2.html
+- Vector2.Distance: https://docs.unity3d.com/ScriptReference/Vector2.Distance.html
+- Mathf.Lerp: https://docs.unity3d.com/ScriptReference/Mathf.Lerp.html
+- Mathf.SmoothDamp: https://docs.unity3d.com/ScriptReference/Mathf.SmoothDamp.html
+- Used for: Distance calculations, fade transitions, smooth movement
+
+Preprocessor Directives
+- Platform Defines: https://docs.unity3d.com/Manual/PlatformDependentCompilation.html
+- UNITY_EDITOR directive: Used in Quitter() method for editor vs build behaviour
+- C# Preprocessor: https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/preprocessor-directives
+
+MonoBehaviour Lifecycle
+- Awake: https://docs.unity3d.com/ScriptReference/MonoBehaviour.Awake.html
+- Start: https://docs.unity3d.com/ScriptReference/MonoBehaviour.Start.html
+- Update: https://docs.unity3d.com/ScriptReference/MonoBehaviour.Update.html
+- Used throughout: Component initialisation and frame-by-frame logic
+
+================================================================================
+ORIGINAL WORK
+================================================================================
+
+The following components were designed and implemented entirely by me:
+- All game design decisions (level progression, difficulty scaling)
+- Complete C# script implementations (adapted from tutorial methodologies)
+- Level layouts and environmental design
+- Enemy spawn patterns and wave configuration
+- Boss behaviour patterns and attack mechanics
+- UI health bar system
+- Scene transition flow and game state management
+- Player and enemy balance adjustments
+- All pixel art assets created in Aseprite
+- Project architecture and file organisation
+- Debugging and optimisation implementations
+
+================================================================================
+ACADEMIC INTEGRITY STATEMENT
+================================================================================
+
+This project was developed in accordance with Brunel University London's
+academic integrity policies. All external resources have been properly
+attributed. Tutorial methodologies were used as learning references and
+adapted for this project's specific requirements. No code was directly
+copied without understanding and modification.
+
+All AI tool usage (Claude AI) was for educational support, technical
+explanation, and learning guidance only. I wrote all code implementations
+independently after understanding the underlying concepts.
+
+================================================================================
+LICENSE & USAGE RIGHTS
+================================================================================
+
+This project is submitted as coursework for CS3005 at Brunel University London.
+Educational use only. All third-party assets and resources are used under their
+respective licenses for academic/educational purposes.
+
+I retain rights to original game design, code implementations, and
+visual assets created for this project.
+
+================================================================================
+ARTIFICIAL INTELLIGENCE TOOLS
+================================================================================
+
+Claude AI (Anthropic)
+- Purpose: Technical guidance, architectural explanations, debugging support
+- Usage: Design pattern consultation, API method explanations, search term 
+  formulation, code structure recommendations
+- Attribution: Anthropic's Claude AI provided technical reference and learning
+  support throughout development. No complete code was generated by AI.
+- Licence: Used in accordance with Claude.ai Terms of Service
+- URL: https://claude.ai
+
+Note: All code implementation was written by me. Claude AI served as
+an educational resource for understanding Unity systems and C# programming
+concepts.
+
+================================================================================
+END OF CREDITS
+================================================================================
+Last Updated: November 2025
