@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
  * i think this should create a snapchot of flow related metrics in specific points of time via
  *CAPTURING:
  * 20 VARS REQUIRED FOR FLOW STATE DETECTION ALGORITHM
- *
  * reference for this is : effective java (bloch,2018), item 2: "consider a builder when faced with man constructtor parameters"
  */
 
@@ -19,7 +18,7 @@ public class FlowMetrics {
     // FLOW METRIC : META DATA
 
     private final LocalDateTime timestamp;
-    private final string sessionId;
+    private final String sessionId;
     private final long sessionDurSecs;
 
     ///
@@ -57,7 +56,7 @@ public class FlowMetrics {
     private final double flowTally;
     private final double stressLevel;
 
-    public FlowMetrics(LocalDateTime timestamp, string sessionId, long sessionDurSecs, int keystrokesPerMin, double avgKeyIntervalMs, int backspcCount, long keyboardIdleMs, int syntaxErrCount, int compilationErr, long timeSinceLastErrorMs, int fileChangesLast10Mins, long timeInCurrentFileMs, int focusLossOrIdleCount, boolean lastBuildSuccess, int consecutiveFailedBuilds, long timeSinceLastBuildMs, double flowTally, double stressLevel) {
+    private FlowMetrics(LocalDateTime timestamp, String sessionId, long sessionDurSecs, int keystrokesPerMin, double avgKeyIntervalMs, int backspcCount, long keyboardIdleMs, int syntaxErrCount, int compilationErr, long timeSinceLastErrorMs, int fileChangesLast10Mins, long timeInCurrentFileMs, int focusLossOrIdleCount, boolean lastBuildSuccess, int consecutiveFailedBuilds, long timeSinceLastBuildMs, double flowTally, double stressLevel, FlowState flowState, String notes) {
         this.timestamp = timestamp;
         this.sessionId = sessionId;
         this.sessionDurSecs = sessionDurSecs;
@@ -76,7 +75,98 @@ public class FlowMetrics {
         this.timeSinceLastBuildMs = timeSinceLastBuildMs;
         this.flowTally = flowTally;
         this.stressLevel = stressLevel;
+
+        //SO, with the use of private constructors, i can force users to utilise the builder pattern which i will do in progress next
+        // prevent direct instantiation
+        //ensures everything is build through controlled api
+        //ref: effective java, item 2: consider a builder when faced with many constructor parameters.
+        this.flowState = flowState;
+        this.notes = notes;
     }
+
+    public enum FlowState
+    {FLOW, NEUTRAL, PROCRASTINATING}
+
+    private final FlowState flowState;
+    private final String notes;
+
+    // FLOW METRICS : GETTERS
+
+
+
+
+
+
+
+
+
+
+
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+    public long getSessionDurSecs() {
+        return sessionDurSecs;
+    }
+
+    public int getKeystrokesPerMin() {
+        return keystrokesPerMin;
+
+    }
+    public double getAvgKeyIntervalMs() {
+        return avgKeyIntervalMs;
+    }
+
+    public int getBackspcCount() {
+        return backspcCount;
+    }
+    public long getKeyboardIdleMs() {
+        return keyboardIdleMs;
+    }
+    public int getSyntaxErrCount() {
+        return syntaxErrCount;
+    }
+    public int getCompilationErr() {
+        return compilationErr;
+
+    }
+    public long getTimeSinceLastErrorMs() {
+        return timeSinceLastErrorMs;
+    }
+
+    public int getFileChangesLast10Mins() {
+        return fileChangesLast10Mins;
+
+    }
+    public long getTimeInCurrentFileMs() {
+        return timeInCurrentFileMs;
+    }
+    public int getFocusLossOrIdleCount() {
+        return FocusLossOrIdleCount;
+    }
+    public boolean isLastBuildSuccess() {
+        return lastBuildSuccess;
+    }
+    public int getConsecutiveFailedBuilds() {
+        return consecutiveFailedBuilds;
+    }
+    public long getTimeSinceLastBuildMs() {
+        return timeSinceLastBuildMs;
+    }
+    public double getFlowTally() {
+        return flowTally;
+    }
+    public double getStressLevel() {
+        return stressLevel;
+    }
+
+    // TOTAL 20/20 VARIABLES!
+    //reminder for myself next time, intelliJ can generate or alt+ insert to select all fields and generates all 20 getters at once
 }
 
 
