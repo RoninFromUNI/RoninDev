@@ -42,7 +42,7 @@ public class FlowMetrics {
 
     private final int fileChangesLast10Mins; //10 mins can help smallen the range of data to be read theoretically
     private final long timeInCurrentFileMs;
-    private final int FocusLossOrIdleCount;
+    private final int focusLossOrIdleCount;
 
     // FLOW METRICl: BUILD RESULTS
 
@@ -69,7 +69,7 @@ public class FlowMetrics {
         this.timeSinceLastErrorMs = timeSinceLastErrorMs;
         this.fileChangesLast10Mins = fileChangesLast10Mins;
         this.timeInCurrentFileMs = timeInCurrentFileMs;
-        FocusLossOrIdleCount = focusLossOrIdleCount;
+        this.focusLossOrIdleCount = focusLossOrIdleCount;
         this.lastBuildSuccess = lastBuildSuccess;
         this.consecutiveFailedBuilds = consecutiveFailedBuilds;
         this.timeSinceLastBuildMs = timeSinceLastBuildMs;
@@ -147,7 +147,7 @@ public class FlowMetrics {
         return timeInCurrentFileMs;
     }
     public int getFocusLossOrIdleCount() {
-        return FocusLossOrIdleCount;
+        return focusLossOrIdleCount;
     }
     public boolean isLastBuildSuccess() {
         return lastBuildSuccess;
@@ -279,6 +279,28 @@ public class FlowMetrics {
             this.notes=notes;
             return this;
 
+        }
+        public FlowMetrics build(){
+            return  new FlowMetrics(timestamp,
+                    sessionId,
+                    sessionDurSecs,
+                    keystrokesPerMin,
+                    avgKeyIntervalMs,
+                    backspcCount,
+                    keyboardIdleMs,
+                    syntaxErrCount,
+                    compilationErr,
+                    timeSinceLastErrorMs,
+                    fileChangesLast10Mins,
+                    timeInCurrentFileMs,
+                    focusLossOrIdleCount,
+                    lastBuildSuccess,
+                    consecutiveFailedBuilds,
+                    timeSinceLastBuildMs,
+                    flowTally,
+                    stressLevel,
+                    flowState,
+                    notes);
         }
 
 
