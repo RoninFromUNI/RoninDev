@@ -165,6 +165,128 @@ public class FlowMetrics {
         return stressLevel;
     }
 
+
+    //dont know why but its preffered to put it after the getters
+    public static class Builder{
+        private LocalDateTime timestamp=LocalDateTime.now();
+        private String sessionId=java.util.UUID.randomUUID().toString();
+        private long sessionDurSecs=0;
+        private int keystrokesPerMin=0;
+        private double avgKeyIntervalMs=0;
+        private int backspcCount=0;
+        private long keyboardIdleMs=0;
+        private int syntaxErrCount=0;
+        private int compilationErr=0;
+        private long timeSinceLastErrorMs=0;
+        private int fileChangesLast10Mins=0;
+        private long timeInCurrentFileMs=0;
+        private int focusLossOrIdleCount=0;
+        private boolean lastBuildSuccess=true;
+        private int consecutiveFailedBuilds=0;
+        private long timeSinceLastBuildMs=0;
+        private double flowTally=0;
+        private double stressLevel=0;
+        private FlowState flowState=FlowState.NEUTRAL;
+        private String notes;
+
+
+        public Builder timestamp(LocalDateTime timestamp){
+            this.timestamp=timestamp;
+            return this;
+        }
+        public Builder sessionId(String sessionId){
+            this.sessionId=sessionId;
+            return this;
+        }
+        public Builder sessionDurSecs(long secs){
+            this.sessionDurSecs=secs;
+            return this;
+        }
+        public Builder keystrokesPerMin(int kpm){
+            this.keystrokesPerMin=kpm;
+            return this;
+        }
+        public Builder setAvgKeyIntervalMs(double avgKeyIntervalMs){
+            this.avgKeyIntervalMs=avgKeyIntervalMs;
+            return this;
+        }
+        public Builder setBackspcCount(int backspcCount){
+            this.backspcCount=backspcCount;
+            return this;
+        }
+        public Builder setKeyboardIdleMs(long keyboardIdleMs){
+            this.keyboardIdleMs=keyboardIdleMs;
+            return this;
+        }
+        public Builder setSyntaxErrCount(int syntaxErrCount){
+            this.syntaxErrCount=syntaxErrCount;
+            return this;
+        }
+        public Builder setCompilationErr(int compilationErr){
+            this.compilationErr=compilationErr;
+            return this;
+        }
+        public Builder setTimeSinceLastErrorMs(long timeSinceLastErrorMs){
+            this.timeSinceLastErrorMs=timeSinceLastErrorMs;
+            return this;
+
+
+        }
+        public Builder setFileChangesLast10Mins(int fileChangesLast10Mins){
+            this.fileChangesLast10Mins=fileChangesLast10Mins;
+            return this;
+
+        }
+        public Builder setTimeInCurrentFileMs(long timeInCurrentFileMs){
+            this.timeInCurrentFileMs=timeInCurrentFileMs;
+            return this;
+        }
+        public Builder setFocusLossOrIdleCount(int focusLossOrIdleCount){
+            this.focusLossOrIdleCount=focusLossOrIdleCount;
+            return this;
+        }
+        public Builder setLastBuildSuccess(boolean lastBuildSuccess){
+            this.lastBuildSuccess=lastBuildSuccess;
+            return this;
+        }
+        public Builder setConsecutiveFailedBuilds(int consecutiveFailedBuilds){
+            this.consecutiveFailedBuilds=consecutiveFailedBuilds;
+            return this;
+
+        }
+        public Builder setTimeSinceLastBuildMs(long timeSinceLastBuildMs){
+            this.timeSinceLastBuildMs=timeSinceLastBuildMs;
+            return this;
+
+        }
+        public Builder setFlowTally(double flowTally){
+            this.flowTally=flowTally;
+            return this;
+
+
+        }
+        public Builder setStressLevel(double stressLevel){
+            this.stressLevel=stressLevel;
+            return this;
+
+        }
+        public Builder setFlowState(FlowState flowState) {
+            this.flowState = flowState;
+            return this;
+
+        }
+        public Builder setNotes(String notes){
+            this.notes=notes;
+            return this;
+
+        }
+
+
+
+
+
+    }
+
     // TOTAL 20/20 VARIABLES!
     //reminder for myself next time, intelliJ can generate or alt+ insert to select all fields and generates all 20 getters at once
 }
