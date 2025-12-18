@@ -24,6 +24,21 @@ public final class MetricCollector implements Disposable
     private final AtomicInteger backspcCount = new AtomicInteger(0);
     private final AtomicLong lastKeyStrokeTimems = new AtomicLong(0);
 
+    //THEREPEUTIC DEV : CONTEXT SWITCHING /FILE FOCUS (could be useful for a ui idea)
+    private final AtomicInteger fileChangeCount = new AtomicInteger(0);
+    private final AtomicLong  currentFileStartms =new AtomicLong(0);
+    private AtomicInteger focusLostCount = new AtomicInteger(0);
+
+    //THEREPEUTIC DEV: ERROR METRICS
+
+    private final AtomicInteger syntaxErrCount = new AtomicInteger(0);
+    private final AtomicInteger compilationErrorCount = new AtomicInteger(0);
+    private final AtomicLong LastErrorTimems = new AtomicLong(0);
+
+
+
+
+
     //establishing here a session with unique id and timestamp
     //construtor will be called by intellijs service system
 
@@ -56,6 +71,53 @@ public final class MetricCollector implements Disposable
             return 0;
         }
         return System.currentTimeMillis() - LastInteraction;
+    }
+
+    // THEREPETUIC DEV CODE SECTION FOR ERROR RECORDING
+
+    public void recSyntaxErr()
+    {
+        syntaxErrCount.incrementAndGet();
+        LastErrorTimems.set(System.currentTimeMillis());
+    }
+
+    public void recCompilationError(int errorCount)
+    {
+        compilationErrorCount.addAndGet(errorCount);
+        LastErrorTimems.set(System.currentTimeMillis());
+    }
+
+    public long  getTimeSinceLastError()
+    {
+        long lastError = LastErrorTimems.get();
+        if(lastError == 0)
+        {
+            return Long.MAX_VALUE;
+        }
+        return System.currentTimeMillis() - lastError; //last error should be recorded in ms since its a var which is equal to the lasterrortimems
+    }
+
+    // THEREPEUTIC DEV CODE SECTION FOR FILE FOCUS RECORDING
+
+    public void recFileChange()
+    {
+        fileChangeCount.incrementAndGet();
+        currentFileStartms.set(System.currentTimeMillis());
+    }
+
+    public void recFocusLoss()
+    {
+        focusLostCount.incrementAndGet();
+    }
+
+    public long getTimeInCurrentFileMs()
+    {
+        long startingTime = currentFileStartms.get();
+        if(startingTime == 0)
+        {
+            return 0;
+        }
+        return System.currentTimeMillis() - startingTime;
     }
     @Override
     public void dispose()
