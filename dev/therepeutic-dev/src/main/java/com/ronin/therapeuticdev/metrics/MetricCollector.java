@@ -167,6 +167,66 @@ public final class MetricCollector implements Disposable
         return addedonFailedBuilds.get();
     }
 
+    // THEREPETUIC DEV FOR SNAPSHOT GENERATIONS
+
+    public FlowMetrics snapshot()
+    {
+        long sessionDurMs = java.time.Duration.between(sessionStart, Instant.now()).toMillis();
+        long sessionDurSecs = sessionDurMs / 1000;
+
+
+        int kpm = 0;
+        if(sessionDurSecs > 0)
+            {
+            kpm = (int) ((keystrokeCount.get() *60)/sessionDurSecs);
+            }
+
+        return new FlowMetrics.Builder()
+                .sessionId(sessionId)
+                .timestamp(Instant.now())
+                .sessionDurSecs(sessionDurSecs)
+
+                .keystrokesPerMin(kpm)
+                .setBackspcCount(backspcCount.get())
+                .setKeyboardIdleMs(getKeyboardIdlems())
+
+                .setSyntaxErrCount(syntaxErrCount.get())
+                .setCompilationErr(compilationErrorCount.get())
+                .setTimeSinceLastErrorMs(getTimeSinceLastError())
+
+                .setFileChangesLast10Mins(fileChangeCount.get())
+                .setTimeInCurrentFileMs(getTimeInCurrentFileMs())
+                .setFocusLossOrIdleCount(focusLostCount.get())
+
+                .setLastBuildSuccess(lastBuildSuccess)
+                .setConsecutiveFailedBuilds(addedonFailedBuilds.get())
+                .setTimeSinceLastBuildMs(getTimeSinceLastBuildMs())
+
+
+                .build();
+    }
+
+    //THEREPEUTIC DEV FOR INTERVAL RESET
+
+    ///  after each snapshot, it resets and is called after snapshot to start fresh
+    /// it does not reset session level data such as session id or start, or the state that it carries
+    /// across intervals like lastbuildsuccess or addedonfailedbuilds
+    ///
+
+    public void resetCounters()
+    {
+        //resets all interval counters
+        keystrokeCount.set(0);
+        backspcCount.set(0);
+        fileChangeCount.set(0);
+        syntaxErrCount.set(0);
+        compilationErrorCount.set(0);
+        focusLostCount.set(0);
+
+        //timestamps not reset, track time since last x
+        //again as well build streak is not reset, carried across.
+    }
+
 
 
     @Override
