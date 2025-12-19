@@ -5,25 +5,50 @@
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Therepeutic-dev</name>
+    <name>Therapeutic-Dev</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.yourcompany.com">YourCompany</vendor>
+
+    <vendor email = "2215624@brunel.ac.uk">Ronin</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
-  ]]></description>
+        <p>Detects developer flow states and suggests intelligent break timing.</p>
+
+        <p>Features:</p>
+        <ul>
+            <li>Real-time flow state detection using IDE metrics</li>
+            <li>Non-intrusive break suggestions</li>
+            <li>Session analytics and insights</li>
+        </ul>
+
+        <p>Developed as part of a Final Year Project at Brunel University London.</p>
+    ]]></description>
+
+    <change-notes><![CDATA[
+        <h3>0.1.0-alpha</h3>
+        <ul>
+            <li>Initial alpha release</li>
+            <li>Core metric collection system</li>
+            <li>Typing activity tracking</li>
+        </ul>
+    ]]></change-notes>
+
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <!-- Minimum IDE version supported -->
+    <idea-version since-build="242" until-build="243.*"/>
+
+    <!-- Required platform dependencies -->
     <depends>com.intellij.modules.platform</depends>
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+        <typedHandler
+                implementation="com.ronin.therapeuticdev.listeners.TypActivityListener"/>
 
     </extensions>
 </idea-plugin>
