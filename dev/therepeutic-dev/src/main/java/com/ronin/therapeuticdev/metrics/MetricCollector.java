@@ -35,6 +35,17 @@ public final class MetricCollector implements Disposable
     private final AtomicInteger compilationErrorCount = new AtomicInteger(0);
     private final AtomicLong LastErrorTimems = new AtomicLong(0);
 
+    //THEREPEUTIC DEV: BUILD METRICS
+
+    private volatile boolean lastBuildSuccess = true;
+    //VOLATILE - i only use it because its ligher in weight and guarantees visibility across threads, especially with plugin management
+    //when one thread writes, all other threads see the updated value IMMIDIENTLY, so basically im already optimising my programming with this
+    //now where should i log this....
+    private final AtomicInteger addedonFailedBuilds = new  AtomicInteger(0);
+    private final AtomicLong LastBuildTimems = new AtomicLong(0);
+
+
+
 
 
 
@@ -119,6 +130,45 @@ public final class MetricCollector implements Disposable
         }
         return System.currentTimeMillis() - startingTime;
     }
+
+    // THEREPEUTIC DEV CODE SECTION FOR BUILD METRICS
+    public void recBuildResult(boolean success)
+    {
+        LastBuildTimems.set(System.currentTimeMillis());
+        lastBuildSuccess = success;
+
+        if(success)
+        {
+            addedonFailedBuilds.set(0); //bascially reset it back to 0 for the streak on any level of success with failing
+        } else
+        {
+            addedonFailedBuilds.incrementAndGet(); //builds up the streak
+            //could atttach the increment with ui desing too later down the line
+        }
+    }
+
+    public long getTimeSinceLastBuildMs()
+    {
+        long lastBuild = LastBuildTimems.get();
+        if(lastBuild == 0)
+        {
+            return Long.MAX_VALUE;
+            //ill study more into the utilisation of max value longs being returned
+        }
+        return System.currentTimeMillis() - lastBuild;
+    }
+    public boolean wasLastBuildSuccessful()
+    {
+        return lastBuildSuccess; //adds on the streak (maybe more logic can be put here)
+    }
+
+    public int getAddedOnFailedBuilds()
+    {
+        return addedonFailedBuilds.get();
+    }
+
+
+
     @Override
     public void dispose()
     {

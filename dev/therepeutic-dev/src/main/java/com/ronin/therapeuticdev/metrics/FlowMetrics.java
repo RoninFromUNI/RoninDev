@@ -1,6 +1,7 @@
 package com.ronin.therapeuticdev.metrics;
 
 import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * i think this should create a snapchot of flow related metrics in specific points of time via
@@ -17,7 +18,7 @@ public class FlowMetrics {
 
     // FLOW METRIC : META DATA
 
-    private final LocalDateTime timestamp;
+    private final Instant timestamp;
     private final String sessionId;
     private final long sessionDurSecs;
 
@@ -56,7 +57,7 @@ public class FlowMetrics {
     private final double flowTally;
     private final double stressLevel;
 
-    private FlowMetrics(LocalDateTime timestamp, String sessionId, long sessionDurSecs, int keystrokesPerMin, double avgKeyIntervalMs, int backspcCount, long keyboardIdleMs, int syntaxErrCount, int compilationErr, long timeSinceLastErrorMs, int fileChangesLast10Mins, long timeInCurrentFileMs, int focusLossOrIdleCount, boolean lastBuildSuccess, int consecutiveFailedBuilds, long timeSinceLastBuildMs, double flowTally, double stressLevel, FlowState flowState, String notes) {
+    private FlowMetrics(Instant timestamp, String sessionId, long sessionDurSecs, int keystrokesPerMin, double avgKeyIntervalMs, int backspcCount, long keyboardIdleMs, int syntaxErrCount, int compilationErr, long timeSinceLastErrorMs, int fileChangesLast10Mins, long timeInCurrentFileMs, int focusLossOrIdleCount, boolean lastBuildSuccess, int consecutiveFailedBuilds, long timeSinceLastBuildMs, double flowTally, double stressLevel, FlowState flowState, String notes) {
         this.timestamp = timestamp;
         this.sessionId = sessionId;
         this.sessionDurSecs = sessionDurSecs;
@@ -103,7 +104,7 @@ public class FlowMetrics {
 
 
 
-    public LocalDateTime getTimestamp() {
+    public Instant getTimestamp() {
         return timestamp;
     }
 
@@ -168,7 +169,7 @@ public class FlowMetrics {
 
     //dont know why but its preffered to put it after the getters
     public static class Builder{
-        private LocalDateTime timestamp=LocalDateTime.now();
+        private Instant timestamp=Instant.now();
         private String sessionId=java.util.UUID.randomUUID().toString();
         private long sessionDurSecs=0;
         private int keystrokesPerMin=0;
@@ -190,7 +191,7 @@ public class FlowMetrics {
         private String notes;
 
 
-        public Builder timestamp(LocalDateTime timestamp){
+        public Builder timestamp(Instant timestamp){
             this.timestamp=timestamp;
             return this;
         }
