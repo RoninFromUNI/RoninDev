@@ -22,11 +22,11 @@ public class FlowDetector {
 
     /// after weights are esstablished, i need to now go ahead and start tunng in my threshold values
 
-    private int =kpmLow =20;
-    private int =kpmOptimal =80;
-    private int =kpmHigh=150; //rushing yourself
+    private int  kpmLow =20;
+    private int  kpmOptimal =80;
+    private int  kpmHigh=150; //rushing yourself
 
-    private in fileChangeTolerance = 5; //10 min window/s
+    private int fileChangeTolerance = 5; //10 min window/s
     private int focusLosstolerance = 3;
 
     //builds or consecuritive failure tolerance
