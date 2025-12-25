@@ -51,6 +51,20 @@ public class FlowDetector {
 
         //TODO: START WITH THIS AS ITS EASIEST
         int kpm = metrics.getKeystrokesPerMin();
+        int bckSpaces = metrics.getBackspcCount();
+        //base calculation for kpm score above here which i could later on translate to a curve if i wanted to. sorta like how opera gx measueres ram usage.
+
+        double kpmScore = calculateKpmScore(kpm);
+
+        //maybe adjust a backspace penalty for the ratio of corrections due to keystrokes
+        //assume backspaces over 10% of keystrokes indicate a slight struggle
+
+        double totalKeys = (kpm>0)?kpm:1; //avoiding a division by zero
+        double backspcRatio = bckSpaces/totalKeys;
+        double backspcPenalty = Math.min(backspcRatio*2,0.3); //indicating a maximum 30% penalty here hehe
+
+        return Math.max(0.0,kpmScore - backspcPenalty);
+
 
         // NORMALISE TYPING SCORE : BELOW MINIMUM THRESHOLD (POOR SCORE -> IDLE OR STUCK)
         if(kpm < kpmLow)
@@ -66,7 +80,24 @@ public class FlowDetector {
             return 0.3+ (pos/range) * 0.7;
         }
 
-        // NORMALISE TYPING SCORE :
+        // NORMALISE TYPING SCORE : optimal but below high due to slight degradation in flow
+
+        if (kpm>kpmOptimal&&kpm <=kpmHigh)
+        {
+            //presenting ffirst a lkinear decline from 1.0 at kpm optimal to roughly 0.6 at kpmHigh
+            //TODO: adjust this value for comfortbale accurate yield
+
+            double range = kpmHigh - kpmLow;
+            double pos = kpm - kpmLow;
+            return 1.0 - (pos/range) * 0.4;
+        }
+
+        //and then for the above threshold to signify rushing, maybe disable this later or find a better way
+        //but very much so theres a clamp at 0.3 minimum if still typing but just too fast
+
+        double excess = kpm - kpmHigh;
+        double penalty = excess/100.0; //declining gradually
+        return Math.max(0.3, 0.6 - penalty);
     }
     private double normaliseErrorScore(FlowMetrics metrics)
     {
