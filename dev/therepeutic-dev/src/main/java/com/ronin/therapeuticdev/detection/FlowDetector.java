@@ -47,7 +47,26 @@ public class FlowDetector {
 
     private double normaliseTypScore (FlowMetrics metrics)
     {
-        return 0.0;
+
+
+        //TODO: START WITH THIS AS ITS EASIEST
+        int kpm = metrics.getKeystrokesPerMin();
+
+        // NORMALISE TYPING SCORE : BELOW MINIMUM THRESHOLD (POOR SCORE -> IDLE OR STUCK)
+        if(kpm < kpmLow)
+        {
+            return (kpm /(double)kpmLow) * 0.3;
+        }
+        // NORMALISE TYPING SCORE : OPTIMAL RANGE (FULL SCORE!)
+
+        if(kpm>=kpmLow && kpm <=kpmOptimal)
+        {
+            double rnage = kpmOptimal - kpmLow;
+            double pos = kpm - kpmLow;
+            return 0.3+ (pos/range) * 0.7;
+        }
+
+        // NORMALISE TYPING SCORE :
     }
     private double normaliseErrorScore(FlowMetrics metrics)
     {
