@@ -29,6 +29,10 @@ public class FlowDetector {
     private int fileChangeTolerance = 5; //10 min window/s
     private int focusLosstolerance = 3;
 
+    //for my error score tolerances
+    private int syntaxErrTolerance = 3;
+    private int compilationErrTolerance = 2;
+
     //builds or consecuritive failure tolerance
 
     private int buildFailTolerance = 2;
@@ -98,7 +102,39 @@ public class FlowDetector {
     }
     private double normaliseErrorScore(FlowMetrics metrics)
     {
-        return 0.0;
+
+       int syntaxErrs = metrics.getSyntaxErrCount();
+       int compilationErrs = metrics.getCompilationErr();
+
+
+       //perfect score start at around 1.0 to deduct for errors
+        double score = 1.0;
+
+        //gentle penalties to be associated with the score, happens with normal typing, classed as natural
+        //beyond it the sscore degrades
+
+        if(syntaxErrs>syntaxErrTolerance)
+        {
+            int excess = syntaxErrs - syntaxErrTolerance;
+            double syntaxPenalty = Math.min(excess*0.1,0.4); //max 40 percent penalty
+            score -= syntaxPenalty;
+        }
+
+        if(compilationErrs>compilationErrTolerance)
+        {
+            int excess = compilationErrs - compilationErrTolerance;
+            double compilationPenalty = Math.min(excess*0.15,0.5); //max 50 percent penalty
+            score-= compilationPenalty;
+        }
+
+        //andddd a lil bonus; time since last error (longer would mean better because developer recovered)
+        long timeSinceError = metrics.getTimeSinceLastErrorMs();
+        if(timeSinceError>600000)
+        {
+            //10 mins of error free
+            score = Math.min(1.0,score+0.1);
+        }
+        return Math.max(0.0,score);
     }
 
     private double normaliseFocusScore(FlowMetrics metrics)
