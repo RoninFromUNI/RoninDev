@@ -46,7 +46,37 @@ public class FlowDetector {
 
     public FlowDetectionResult detect(FlowMetrics metrics)
     {
-        return null;
+         //FLOW DETECTION RESULT : CALCULATE INDIVIDUAL SCORES
+
+        double typingScore = normaliseTypScore(metrics);
+        double errScore = normaliseErrorScore(metrics);
+        double focusScore = normaliseFocusScore(metrics);
+        double buildScore = normaliseBuildScore(metrics);
+        double activityScore = normaliseActivityScore(metrics);
+
+        //FLOW DETECTION RESULT:  APPLYING WEIGHTS AND SUM
+
+        double flowTally = (typingScore*weightTyping) + (errScore* weightErr) + (focusScore*weightFocus) + (buildScore*weightBuilds)+(activityScore*weightActivity);
+
+        //then a few more steps and we finish core algorithm baby!
+
+        FlowState state;
+        if(flowTally >= flowThreshold)
+        {
+            state = FlowState.FLOW;
+        } else if (flowTally <=procrastinateThreshold)
+        {
+            state =FlowState.PROCRASTINATING;
+
+        } else
+        {
+            state = FlowState.NEUTRAL;
+        }
+
+        //RETURRRNNN TO SENDERRRRRRRRRR
+
+        return new FlowDetectionResult(
+                typingScore,errScore,focusScore,buildScore,activityScore,flowTally,state);
     }
 
     private double normaliseTypScore (FlowMetrics metrics) {
@@ -139,15 +169,95 @@ public class FlowDetector {
 
     private double normaliseFocusScore(FlowMetrics metrics)
     {
-        return 0.0;
+        int fileChanges = metrics.getFileChangesLast10Mins();
+        long timeInFile = metrics.getTimeInCurrentFileMs();
+        int FocusLosses = metrics.getFocusLossOrIdleCount();
+
+        double score = 1.0;
+
+        //penalise excessive file switching (costs the user)
+        if(fileChanges>fileChangeTolerance)
+
+        {
+            int excess = fileChanges - fileChangeTolerance;
+            double focusPenalty = Math.min(excess*0.1,0.3);
+            score -= focusPenalty;
+        }
+        if(FocusLosses>focusLosstolerance)
+        {
+            int excess = FocusLosses - focusLosstolerance;
+            double focusPenalty = Math.min(excess*0.1,0.3);
+            score -= focusPenalty;
+        }
+        //bonus for sustained focus in one file (2+ minuites preferably)
+        if(timeInFile>120000)
+        {
+            score = Math.min(1.0,score+0.15);
+        }
+        return Math.max(0.0,score);
     }
     private double normaliseBuildScore(FlowMetrics metrics)
     {
-        return 0.0;
+        boolean lastBuildSuccess = metrics.isLastBuildSuccess();
+        int consecutiveFails = metrics.getConsecutiveFailedBuilds();
+        long timeSinceBuild = metrics.getTimeSinceLastBuildMs();
+        double score = 1.0;
+
+        //last build failed is a base penalty
+        if(!lastBuildSuccess)
+        {
+            score -=0.3;
+        }
+
+        //for more consecutive failures compound the penalty then
+        if(consecutiveFails>buildFailTolerance)
+        {
+            int excess = consecutiveFails - buildFailTolerance;
+            double failpenalty = Math.min(excess*0.15,0.4);
+            score -= failpenalty;
+        }
+
+        //oh nooo havent builded in a while, slight penalty
+        //not to oharsh and some dont need frequent builds
+        if(timeSinceBuild>1800000)
+        {
+            score -=0.1; //30+ minutes
+        }
+
+        if(lastBuildSuccess&&timeSinceBuild<300000)
+        {
+            score = Math.min(1.0,score+0.1);
+
+        }
+        return Math.max(0.0,score);
     }
     private double normaliseActivityScore(FlowMetrics metrics)
     {
-        return 0.0;
+        long sessionDuration = metrics.getSessionDurSecs();
+        long keyboardIdle = metrics.getKeyboardIdleMs();
+        double score = 1.0;
+
+        //started? youre neutral then, no data
+
+        if(sessionDuration<60)
+        {
+            return 0.5;
+        }
+        //idle too long? penalty, might be distracted or stuck
+
+        if(keyboardIdle>120000) //2 mins idle
+        {
+            double idlePenalty = Math.min((keyboardIdle - 120000) / 300000.0, 0.5);
+            score -= idlePenalty;
+        }
+
+        //sustaaaaaaaaaained session bonusesss, 15 minutes of activity
+
+        if(sessionDuration>900 && keyboardIdle<60000)
+        {
+            score = Math.min(1.0,score+0.1);
+        }
+        return Math.max(0.0,score);
     }
     //TODO: IMPLEMENT EVERYTHING ABOVE LATER!
 
