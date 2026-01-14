@@ -47,8 +47,8 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <typedHandler
-                implementation="com.ronin.therapeuticdev.listeners.TypActivityListener"/>
-
+        <applicationService serviceImplementation="com.ronin.therapeuticdev.metrics.MetricCollector"/>
+        <typedHandler implementation="com.ronin.therapeuticdev.listeners.TypingActivityListener"/>
+        <backspaceHandlerDelegate implementation="com.ronin.therapeuticdev.listeners.BackspaceHandler"/>
     </extensions>
 </idea-plugin>

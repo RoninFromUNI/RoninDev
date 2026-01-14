@@ -8,7 +8,7 @@ import com.intellij.psi.PsiFile;
 import com.ronin.therapeuticdev.metrics.MetricCollector;
 import org.jetbrains.annotations.NotNull;
 
-public class TypActivityListener extends TypedHandlerDelegate
+public class TypingActivityListener extends TypedHandlerDelegate
 {
     //helps to intercept keystrokes in intelliJ and forwards them to metriccollector
     //calls on every character typed specifcially in any editor window
