@@ -1,54 +1,115 @@
-<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<!-- Plugin Configuration for Therapeutic Dev -->
 <idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>com.ronin.therapeuticdev.therepeutic-dev</id>
+    <id>com.ronin.therapeuticdev</id>
+    <name>Therapeutic Dev</name>
+    <version>0.1.0-alpha</version>
+    <vendor email="ronin@example.com" url="https://github.com/ronin">Ronin</vendor>
 
-    <!-- Public plugin name should be written in Title Case.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Therapeutic-Dev</name>
-
-    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-
-    <vendor email = "2215624@brunel.ac.uk">Ronin</vendor>
-
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-        <p>Detects developer flow states and suggests intelligent break timing.</p>
-
-        <p>Features:</p>
-        <ul>
-            <li>Real-time flow state detection using IDE metrics</li>
-            <li>Non-intrusive break suggestions</li>
-            <li>Session analytics and insights</li>
-        </ul>
-
-        <p>Developed as part of a Final Year Project at Brunel University London.</p>
+    <p>Detects developer flow states through real-time IDE metrics and suggests intelligent break timing.</p>
+    
+    <p><strong>Features:</strong></p>
+    <ul>
+        <li>Real-time flow state detection using typing patterns, errors, and context switching</li>
+        <li>Intelligent break suggestions based on flow duration and state transitions</li>
+        <li>Activity heatmap showing file focus distribution</li>
+        <li>Configurable detection sensitivity and break intervals</li>
+    </ul>
+    
+    <p><em>Part of Final Year Project research at Brunel University London.</em></p>
     ]]></description>
 
     <change-notes><![CDATA[
-        <h3>0.1.0-alpha</h3>
-        <ul>
-            <li>Initial alpha release</li>
-            <li>Core metric collection system</li>
-            <li>Typing activity tracking</li>
-        </ul>
+    <p><strong>0.1.0-alpha</strong></p>
+    <ul>
+        <li>Initial alpha release</li>
+        <li>Core flow detection algorithm</li>
+        <li>Basic metric collection</li>
+    </ul>
     ]]></change-notes>
 
+    <!-- Minimum IDE version -->
+    <idea-version since-build="233" until-build="243.*"/>
 
-    <!-- Product and plugin compatibility requirements.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
-    <!-- Minimum IDE version supported -->
-    <idea-version since-build="242" until-build="243.*"/>
-
-    <!-- Required platform dependencies -->
+    <!-- Plugin dependencies -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.java</depends>
 
-    <!-- Extension points defined by the plugin.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.ronin.therapeuticdev.metrics.MetricCollector"/>
-        <typedHandler implementation="com.ronin.therapeuticdev.listeners.TypingActivityListener"/>
-        <backspaceHandlerDelegate implementation="com.ronin.therapeuticdev.listeners.BackspaceHandler"/>
+        
+        <!-- ==================== SERVICES ==================== -->
+        
+        <!-- MetricCollector: Central metrics aggregation -->
+        <applicationService 
+            serviceImplementation="com.ronin.therapeuticdev.services.MetricCollector"/>
+        
+        <!-- SnapshotScheduler: Periodic flow detection -->
+        <applicationService 
+            serviceImplementation="com.ronin.therapeuticdev.services.SnapshotScheduler"/>
+        
+        <!-- ==================== LISTENERS ==================== -->
+        
+        <!-- Typing activity (keystrokes) -->
+        <typedHandler 
+            implementation="com.ronin.therapeuticdev.listeners.TypingActivityListener"/>
+        
+        <!-- Backspace handling -->
+        <backspaceHandlerDelegate 
+            implementation="com.ronin.therapeuticdev.listeners.BackspaceHandler"/>
+        
+        <!-- ==================== STARTUP ==================== -->
+        
+        <!-- Initialize plugin when project opens -->
+        <postStartupActivity 
+            implementation="com.ronin.therapeuticdev.TherapeuticDevStartup"/>
+        
+        <!-- ==================== UI COMPONENTS ==================== -->
+        
+        <!-- Tool Window (main panel) -->
+        <toolWindow 
+            id="Therapeutic Dev" 
+            anchor="right" 
+            icon="/icons/flow-icon.svg"
+            factoryClass="com.ronin.therapeuticdev.ui.FlowStateToolWindowFactory"/>
+        
+        <!-- Status Bar Widget -->
+        <statusBarWidgetFactory 
+            id="TherapeuticDevWidget"
+            implementation="com.ronin.therapeuticdev.ui.FlowStatusBarWidgetFactory"/>
+        
+        <!-- Settings Panel -->
+        <applicationConfigurable 
+            parentId="tools"
+            instance="com.ronin.therapeuticdev.settings.TherapeuticDevConfigurable"
+            id="com.ronin.therapeuticdev.settings"
+            displayName="Therapeutic Dev"/>
+        
+        <!-- Persistent Settings State -->
+        <applicationService 
+            serviceImplementation="com.ronin.therapeuticdev.settings.TherapeuticDevSettings"/>
+        
     </extensions>
+
+    <!-- Project-level listeners (registered via listener topics) -->
+    <projectListeners>
+        <!-- File editor changes (context switching) -->
+        <listener 
+            class="com.ronin.therapeuticdev.listeners.FileActivityListener"
+            topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
+
+    <!-- Application-level listeners -->
+    <applicationListeners>
+        <!-- IDE focus tracking -->
+        <listener 
+            class="com.ronin.therapeuticdev.listeners.FocusListener"
+            topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+        
+        <!-- Build/compilation results -->
+        <listener 
+            class="com.ronin.therapeuticdev.listeners.BuildListener"
+            topic="com.intellij.openapi.compiler.CompilationStatusListener"/>
+    </applicationListeners>
+
 </idea-plugin>
