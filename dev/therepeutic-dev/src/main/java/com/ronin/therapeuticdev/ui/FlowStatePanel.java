@@ -8,7 +8,6 @@ import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBTabbedPane;
 import com.intellij.util.ui.JBUI;
 import com.ronin.therapeuticdev.detection.FlowDetectionResult;
-import com.ronin.therapeuticdev.detection.FlowState;
 import com.ronin.therapeuticdev.metrics.FlowMetrics;
 import com.ronin.therapeuticdev.services.MetricCollector;
 import com.ronin.therapeuticdev.services.SnapshotScheduler;

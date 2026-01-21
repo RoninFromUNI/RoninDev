@@ -15,12 +15,12 @@ import java.util.List;
 /**
  * SQLite persistence layer for flow metrics and detection results.
  * 
- * <p>Stores:
+ * Stores:
  * - FlowMetrics snapshots (raw data for analysis)
  * - FlowDetectionResults (calculated scores and states)
  * - Manual flow state labels (for user study validation)
  * 
- * <p>Database location: [IDE config dir]/therapeutic-dev/metrics.db
+ * Database location: [IDE config dir]/therapeutic-dev/metrics.db
  *
  * @see <a href="https://www.sqlite.org/lang.html">SQLite Documentation</a>
  */
@@ -140,7 +140,7 @@ public class MetricRepository {
             pstmt.setString(2, metrics.getTimestamp().toString());
             
             // Typing
-            pstmt.setDouble(3, metrics.getKeystrokesPerMinute());
+            pstmt.setDouble(3, metrics.getKeystrokesPerMin());
             pstmt.setDouble(4, metrics.getAvgKeyIntervalMs());
             pstmt.setInt(5, metrics.getBackspaceCount());
             pstmt.setLong(6, metrics.getKeyboardIdleMs());
@@ -161,7 +161,7 @@ public class MetricRepository {
             pstmt.setLong(15, metrics.getTimeSinceLastBuildMs());
             
             // Session
-            pstmt.setLong(16, metrics.getSessionDuration());
+            pstmt.setLong(16, metrics.getSessionDurationMs());
             
             // Detection results
             pstmt.setDouble(17, result.getFlowTally());

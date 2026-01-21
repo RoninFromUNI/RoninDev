@@ -5,28 +5,33 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
-import com.ronin.therapeuticdev.metrics.MetricCollector;
+import com.ronin.therapeuticdev.services.MetricCollector;
 import org.jetbrains.annotations.NotNull;
 
-public class TypingActivityListener extends TypedHandlerDelegate
-{
-    //helps to intercept keystrokes in intelliJ and forwards them to metriccollector
-    //calls on every character typed specifcially in any editor window
+/**
+ * Intercepts keystrokes in IntelliJ editors and forwards them to MetricCollector.
+ * Called on every character typed in any editor window.
+ * 
+ * Feeds the Typing metric category (30% weight) in FlowDetector.
+ */
+public class TypingActivityListener extends TypedHandlerDelegate {
 
     @Override
-
-    public @NotNull Result charTyped(char c, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file)
-    {
+    public @NotNull Result charTyped(char c, @NotNull Project project, 
+                                      @NotNull Editor editor, @NotNull PsiFile file) {
+        
         MetricCollector collector = ApplicationManager.getApplication()
-        .getService(MetricCollector.class);
+                .getService(MetricCollector.class);
+
+        if (collector == null) {
+            return Result.CONTINUE;
+        }
 
         long now = System.currentTimeMillis();
 
-        if(c=='\b')
-        {
+        if (c == '\b') {
             collector.recBackspc(now);
-        } else
-        {
+        } else {
             collector.recKeystroke(now);
         }
 

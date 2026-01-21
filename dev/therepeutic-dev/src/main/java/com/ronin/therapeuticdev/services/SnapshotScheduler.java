@@ -19,14 +19,14 @@ import java.util.List;
 /**
  * Periodic scheduler that triggers flow detection at regular intervals.
  * 
- * <p>Every SNAPSHOT_INTERVAL_SECONDS:
+ * Every SNAPSHOT_INTERVAL_SECONDS:
  * 1. Collects current error count from code analysis
  * 2. Creates a FlowMetrics snapshot from MetricCollector
  * 3. Runs FlowDetector.detect() on the snapshot
  * 4. Notifies registered listeners of the result
  * 5. Optionally persists the snapshot for user study analysis
  * 
- * <p>Uses IntelliJ's AppExecutorUtil for proper thread handling.
+ * Uses IntelliJ's AppExecutorUtil for proper thread handling.
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/general-threading-rules.html">
  *      IntelliJ Platform SDK - Threading Rules</a>

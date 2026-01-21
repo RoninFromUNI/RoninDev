@@ -13,11 +13,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Central service that collects and aggregates coding metrics in real-time.
  * 
- * <p>All listener classes feed raw events into this collector.
+ * All listener classes feed raw events into this collector.
  * Periodically, the SnapshotScheduler calls {@link #snapshot()} to capture
  * current state and feed it to FlowDetector for analysis.
  * 
- * <p>Thread-safe: uses atomic types for all counters since multiple
+ * Thread-safe: uses atomic types for all counters since multiple
  * editor threads may record events concurrently.
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/plugin-services.html">

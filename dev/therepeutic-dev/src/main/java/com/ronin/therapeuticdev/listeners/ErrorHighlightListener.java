@@ -17,15 +17,15 @@ import java.util.List;
 /**
  * Tracks real-time syntax errors from IntelliJ's code analysis.
  * 
- * <p>Syntax errors detected as you type indicate:
+ * Syntax errors detected as you type indicate:
  * - Incomplete code (normal during active typing)
  * - Actual mistakes (potential flow disruption)
  * - Recovery patterns (errors clearing indicates progress)
  * 
- * <p>This provides real-time error feedback, complementing
+ * This provides real-time error feedback, complementing
  * build-time errors from {@link BuildListener}.
  *
- * <p>Feeds the Errors metric category (25% weight) in FlowDetector.
+ * Feeds the Errors metric category (25% weight) in FlowDetector.
  */
 public class ErrorHighlightListener {
 

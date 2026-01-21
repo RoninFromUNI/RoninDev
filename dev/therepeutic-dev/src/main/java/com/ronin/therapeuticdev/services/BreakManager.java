@@ -16,12 +16,12 @@ import java.util.concurrent.TimeUnit;
 /**
  * Manages break notifications and timing.
  * 
- * <p>Listens to flow detection results and triggers break suggestions when:
+ * Listens to flow detection results and triggers break suggestions when:
  * - Flow duration exceeds configured threshold
  * - User exits flow state (score drops)
  * - High stress/distraction detected
  *
- * <p>Respects user preferences for notification style and snooze behavior.
+ * Respects user preferences for notification style and snooze behavior.
  */
 @Service(Service.Level.APP)
 public final class BreakManager implements SnapshotScheduler.FlowDetectionListener {
@@ -144,7 +144,7 @@ public final class BreakManager implements SnapshotScheduler.FlowDetectionListen
         TherapeuticDevSettings settings = TherapeuticDevSettings.getInstance();
         long flowDurationMs = inActiveFlow ? 
                 System.currentTimeMillis() - flowStartTimeMs : 
-                metrics.getSessionDuration();
+                metrics.getSessionDurationMs();
         
         LOG.info("Suggesting break: " + reason);
         
@@ -156,8 +156,7 @@ public final class BreakManager implements SnapshotScheduler.FlowDetectionListen
         }
         
         if (settings.useModalNotifications) {
-            final Project finalProject = project;
-            BreakNotificationDialog.show(finalProject, flowDurationMs, reason,
+            BreakNotificationDialog.show(project, flowDurationMs, reason,
                     new BreakNotificationDialog.BreakCallback() {
                         @Override
                         public void onTakeBreak() {
