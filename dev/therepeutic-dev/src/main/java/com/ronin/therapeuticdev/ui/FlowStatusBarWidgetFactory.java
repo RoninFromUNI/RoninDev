@@ -21,14 +21,14 @@ import java.awt.event.MouseEvent;
 
 /**
  * Factory for creating the Therapeutic Dev status bar widget.
- * 
+ *
  * <p>Widget displays:
  * <pre>
  * ┌─────────────────┐
  * │ ● 72 FLOW ████ │
  * └─────────────────┘
  * </pre>
- * 
+ *
  * <p>Color-coded dot indicates state (green/amber/red).
  * Clicking opens the Tool Window.
  */
@@ -68,17 +68,20 @@ public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
 
     /**
      * The actual status bar widget implementation.
+     *
+     * TODO LATER: Consider IconPresentation for custom colored dot icon.
+     * Switched from MultipleTextValuesPresentation to TextPresentation for SDK compatibility.
      */
-    private static class FlowStatusBarWidget implements StatusBarWidget, 
-            StatusBarWidget.MultipleTextValuesPresentation,
+    private static class FlowStatusBarWidget implements StatusBarWidget,
+            StatusBarWidget.TextPresentation,
             SnapshotScheduler.FlowDetectionListener {
 
         private final Project project;
         private StatusBar statusBar;
-        
+
         private int currentScore = 0;
         private FlowState currentState = FlowState.NEUTRAL;
-        
+
         private static final Color FLOW_GREEN = new Color(0x4C, 0xAF, 0x50);
         private static final Color NEUTRAL_AMBER = new Color(0xE5, 0xA8, 0x4B);
         private static final Color STRESS_RED = new Color(0xF4, 0x43, 0x36);
@@ -91,7 +94,7 @@ public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
         private void registerListener() {
             SnapshotScheduler scheduler = ApplicationManager.getApplication()
                     .getService(SnapshotScheduler.class);
-            
+
             if (scheduler != null) {
                 scheduler.addListener(this);
             }
@@ -101,7 +104,7 @@ public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
         public void onFlowDetected(FlowDetectionResult result, FlowMetrics metrics) {
             currentScore = (int)(result.getFlowTally() * 100);
             currentState = result.getState();
-            
+
             // Update widget on EDT
             if (statusBar != null) {
                 SwingUtilities.invokeLater(() -> statusBar.updateWidget(WIDGET_ID));
@@ -122,7 +125,7 @@ public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
         public void dispose() {
             SnapshotScheduler scheduler = ApplicationManager.getApplication()
                     .getService(SnapshotScheduler.class);
-            
+
             if (scheduler != null) {
                 scheduler.removeListener(this);
             }
@@ -133,21 +136,18 @@ public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
             return this;
         }
 
-        // ========== MultipleTextValuesPresentation ==========
+        // ========== TextPresentation ==========
 
         @Override
-        public @Nullable String getSelectedValue() {
-            // Return the text to display
-            return String.format("● %d %s", currentScore, currentState.name());
+        public @NotNull String getText() {
+            // State indicator dot + score + state name
+            String dot = getStateDot(currentState);
+            return String.format("%s %d %s", dot, currentScore, currentState.name());
         }
 
         @Override
         public @Nullable String getTooltipText() {
-            String stateDesc = switch (currentState) {
-                case FLOW -> "Deep work - don't interrupt";
-                case NEUTRAL -> "Normal activity";
-                case PROCRASTINATING -> "High distraction / errors detected";
-            };
+            String stateDesc = getStateDescription(currentState);
             return String.format("Flow Score: %d\nState: %s\n%s\n\nClick to open Therapeutic Dev",
                     currentScore, currentState.name(), stateDesc);
         }
@@ -165,54 +165,44 @@ public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
         }
 
         @Override
-        public @Nullable java.util.List<String> getValues() {
-            return null; // Not used for simple display
+        public float getAlignment() {
+            return Component.CENTER_ALIGNMENT;
         }
 
-        @Override
-        public @Nullable Icon getIcon() {
-            // Return a colored icon based on state
-            return new StateIcon(currentState);
-        }
-    }
+        // ========== Helper Methods ==========
 
-    /**
-     * Simple colored circle icon for the status bar.
-     */
-    private static class StateIcon implements Icon {
-        
-        private static final int SIZE = 10;
-        private final FlowState state;
-        
-        public StateIcon(FlowState state) {
-            this.state = state;
+        /**
+         * Returns emoji dot for state display.
+         * Uses if-else to avoid switch expression exhaustiveness issues.
+         */
+        private String getStateDot(FlowState state) {
+            if (state == null) {
+                return "○";
+            } else if (state == FlowState.FLOW) {
+                return "🟢";
+            } else if (state == FlowState.PROCRASTINATING) {
+                return "🔴";
+            } else {
+                // NEUTRAL fallback
+                return "🟡";
+            }
         }
-        
-        @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            
-            Color color = switch (state) {
-                case FLOW -> new Color(0x4C, 0xAF, 0x50);
-                case NEUTRAL -> new Color(0xE5, 0xA8, 0x4B);
-                case PROCRASTINATING -> new Color(0xF4, 0x43, 0x36);
-            };
-            
-            g2.setColor(color);
-            g2.fillOval(x, y, SIZE, SIZE);
-            
-            g2.dispose();
-        }
-        
-        @Override
-        public int getIconWidth() {
-            return SIZE;
-        }
-        
-        @Override
-        public int getIconHeight() {
-            return SIZE;
+
+        /**
+         * Returns human-readable state description.
+         * Uses if-else to avoid switch expression exhaustiveness issues.
+         */
+        private String getStateDescription(FlowState state) {
+            if (state == null) {
+                return "Unknown state";
+            } else if (state == FlowState.FLOW) {
+                return "Deep work - don't interrupt";
+            } else if (state == FlowState.PROCRASTINATING) {
+                return "High distraction / errors detected";
+            } else {
+                // NEUTRAL fallback
+                return "Normal activity";
+            }
         }
     }
 }

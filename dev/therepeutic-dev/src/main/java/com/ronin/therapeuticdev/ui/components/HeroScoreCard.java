@@ -11,7 +11,7 @@ import java.awt.*;
 
 /**
  * Hero card displaying the current flow score prominently.
- * 
+ *
  * <p>Layout:
  * <pre>
  * ┌─────────────────────────────────┐
@@ -30,12 +30,12 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
     private static final Color STRESS_RED = new Color(0xF4, 0x43, 0x36);
     private static final Color CARD_BG = new Color(0x25, 0x25, 0x25);
     private static final Color CARD_BORDER = new Color(0x3C, 0x3F, 0x41);
-    
+
     private final JBLabel scoreLabel;
     private final JBLabel trendLabel;
     private final JBLabel stateLabel;
     private final JBPanel<?> stateBadge;
-    
+
     private int currentScore = 0;
     private FlowState currentState = FlowState.NEUTRAL;
 
@@ -47,37 +47,37 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
                 JBUI.Borders.empty(16)
         ));
         setPreferredSize(new Dimension(-1, JBUI.scale(100)));
-        
+
         // === CENTER: Score + Trend ===
         JBPanel<?> centerPanel = new JBPanel<>(new FlowLayout(FlowLayout.CENTER, 10, 0));
         centerPanel.setOpaque(false);
-        
+
         // Big score number
         scoreLabel = new JBLabel("0");
         scoreLabel.setFont(scoreLabel.getFont().deriveFont(Font.BOLD, 48f));
         scoreLabel.setForeground(JBColor.WHITE);
         centerPanel.add(scoreLabel);
-        
+
         // Trend indicator
         trendLabel = new JBLabel("");
         trendLabel.setFont(trendLabel.getFont().deriveFont(14f));
         trendLabel.setForeground(FLOW_GREEN);
         centerPanel.add(trendLabel);
-        
+
         add(centerPanel, BorderLayout.CENTER);
-        
+
         // === BOTTOM: State badge ===
         JBPanel<?> bottomPanel = new JBPanel<>(new FlowLayout(FlowLayout.CENTER));
         bottomPanel.setOpaque(false);
-        
+
         stateBadge = createStateBadge();
         stateLabel = new JBLabel("NEUTRAL");
         stateLabel.setFont(stateLabel.getFont().deriveFont(11f));
         stateLabel.setForeground(JBColor.namedColor("Label.foreground", new Color(0xA9, 0xB7, 0xC6)));
-        
+
         bottomPanel.add(stateBadge);
         bottomPanel.add(stateLabel);
-        
+
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
@@ -88,10 +88,10 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
+
                 g2.setColor(getStateColor(currentState));
                 g2.fillOval(2, 2, getWidth() - 4, getHeight() - 4);
-                
+
                 g2.dispose();
             }
         };
@@ -110,10 +110,10 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
     public void updateScore(int score, FlowState state, int trend) {
         this.currentScore = score;
         this.currentState = state;
-        
+
         // Update score
         scoreLabel.setText(String.valueOf(score));
-        
+
         // Update trend
         if (trend > 0) {
             trendLabel.setText("▲ +" + trend);
@@ -124,34 +124,41 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
         } else {
             trendLabel.setText("");
         }
-        
+
         // Update state badge
         stateLabel.setText(state.name());
         stateBadge.repaint();
-        
+
         // Update score color based on state
         scoreLabel.setForeground(getStateColor(state));
     }
 
+    /**
+     * Maps FlowState to display color.
+     * Uses if-else chain to avoid switch expression exhaustiveness requirements.
+     */
     private Color getStateColor(FlowState state) {
-        return switch (state) {
-            case FLOW -> FLOW_GREEN;
-            case NEUTRAL -> NEUTRAL_AMBER;
-            case PROCRASTINATING -> STRESS_RED;
-        };
+        if (state == FlowState.FLOW) {
+            return FLOW_GREEN;
+        } else if (state == FlowState.PROCRASTINATING) {
+            return STRESS_RED;
+        } else {
+            // NEUTRAL or null fallback
+            return NEUTRAL_AMBER;
+        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
+
         // Draw rounded background
         g2.setColor(getBackground());
         g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-        
+
         g2.dispose();
-        
+
         super.paintComponent(g);
     }
 }

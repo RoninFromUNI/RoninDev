@@ -37,79 +37,73 @@
     <depends>com.intellij.modules.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        
+
         <!-- ==================== SERVICES ==================== -->
-        
+
         <!-- MetricCollector: Central metrics aggregation -->
-        <applicationService 
-            serviceImplementation="com.ronin.therapeuticdev.services.MetricCollector"/>
-        
+        <applicationService
+                serviceImplementation="com.ronin.therapeuticdev.services.MetricCollector"/>
+
         <!-- SnapshotScheduler: Periodic flow detection -->
-        <applicationService 
-            serviceImplementation="com.ronin.therapeuticdev.services.SnapshotScheduler"/>
-        
+        <applicationService
+                serviceImplementation="com.ronin.therapeuticdev.services.SnapshotScheduler"/>
+
         <!-- ==================== LISTENERS ==================== -->
-        
+
         <!-- Typing activity (keystrokes) -->
-        <typedHandler 
-            implementation="com.ronin.therapeuticdev.listeners.TypingActivityListener"/>
-        
+        <typedHandler
+                implementation="com.ronin.therapeuticdev.listeners.TypingActivityListener"/>
+
         <!-- Backspace handling -->
-        <backspaceHandlerDelegate 
-            implementation="com.ronin.therapeuticdev.listeners.BackspaceHandler"/>
-        
-        <!-- ==================== STARTUP ==================== -->
-        
-        <!-- Initialize plugin when project opens -->
-        <postStartupActivity 
-            implementation="com.ronin.therapeuticdev.TherapeuticDevStartup"/>
-        
+        <backspaceHandlerDelegate
+                implementation="com.ronin.therapeuticdev.listeners.BackspaceHandler"/>
+
         <!-- ==================== UI COMPONENTS ==================== -->
-        
+
         <!-- Tool Window (main panel) -->
-        <toolWindow 
-            id="Therapeutic Dev" 
-            anchor="right" 
-            icon="/icons/flow-icon.svg"
-            factoryClass="com.ronin.therapeuticdev.ui.FlowStateToolWindowFactory"/>
-        
+        <toolWindow
+                id="Therapeutic Dev"
+                anchor="right"
+                icon="/icons/flow-icon.svg"
+                factoryClass="com.ronin.therapeuticdev.ui.FlowStateToolWindowFactory"/>
+
         <!-- Status Bar Widget -->
-        <statusBarWidgetFactory 
-            id="TherapeuticDevWidget"
-            implementation="com.ronin.therapeuticdev.ui.FlowStatusBarWidgetFactory"/>
-        
+        <statusBarWidgetFactory
+                id="TherapeuticDevWidget"
+                implementation="com.ronin.therapeuticdev.ui.FlowStatusBarWidgetFactory"/>
+
         <!-- Settings Panel -->
-        <applicationConfigurable 
-            parentId="tools"
-            instance="com.ronin.therapeuticdev.settings.TherapeuticDevConfigurable"
-            id="com.ronin.therapeuticdev.settings"
-            displayName="Therapeutic Dev"/>
-        
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.ronin.therapeuticdev.settings.TherapeuticDevConfigurable"
+                id="com.ronin.therapeuticdev.settings"
+                displayName="Therapeutic Dev"/>
+
         <!-- Persistent Settings State -->
-        <applicationService 
-            serviceImplementation="com.ronin.therapeuticdev.settings.TherapeuticDevSettings"/>
-        
+        <applicationService
+                serviceImplementation="com.ronin.therapeuticdev.settings.TherapeuticDevSettings"/>
+
     </extensions>
 
     <!-- Project-level listeners (registered via listener topics) -->
     <projectListeners>
         <!-- File editor changes (context switching) -->
-        <listener 
-            class="com.ronin.therapeuticdev.listeners.FileActivityListener"
-            topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+        <listener
+                class="com.ronin.therapeuticdev.listeners.FileActivityListener"
+                topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
     </projectListeners>
 
     <!-- Application-level listeners -->
     <applicationListeners>
         <!-- IDE focus tracking -->
-        <listener 
-            class="com.ronin.therapeuticdev.listeners.FocusListener"
-            topic="com.intellij.openapi.application.ApplicationActivationListener"/>
-        
+        <listener
+                class="com.ronin.therapeuticdev.listeners.FocusListener"
+                topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+
         <!-- Build/compilation results -->
-        <listener 
-            class="com.ronin.therapeuticdev.listeners.BuildListener"
-            topic="com.intellij.openapi.compiler.CompilationStatusListener"/>
+        <listener
+                class="com.ronin.therapeuticdev.listeners.BuildListener"
+                topic="com.intellij.openapi.compiler.CompilationStatusListener"/>
     </applicationListeners>
 
 </idea-plugin>

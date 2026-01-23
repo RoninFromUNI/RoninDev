@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBTabbedPane;
 import com.intellij.util.ui.JBUI;
 import com.ronin.therapeuticdev.detection.FlowDetectionResult;
+import com.ronin.therapeuticdev.detection.FlowState; // ADDED: Missing import
 import com.ronin.therapeuticdev.metrics.FlowMetrics;
 import com.ronin.therapeuticdev.services.MetricCollector;
 import com.ronin.therapeuticdev.services.SnapshotScheduler;
@@ -21,7 +22,7 @@ import java.awt.*;
 
 /**
  * Main panel for the Therapeutic Dev tool window.
- * 
+ *
  * <p>Layout structure (from wireframe v3):
  * <pre>
  * ┌─────────────────────────────┐
@@ -41,7 +42,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
 
     private final Project project;
     private final JBPanel<JBPanel<?>> mainPanel;
-    
+
     // UI Components
     private HeroScoreCard heroCard;
     private JBTabbedPane tabbedPane;
@@ -49,7 +50,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
     private ActivityTabPanel activityTab;
     private GraphTabPanel graphTab;
     private JBLabel sessionLabel;
-    
+
     // State
     private FlowDetectionResult lastResult;
     private long sessionStartMs;
@@ -58,10 +59,10 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
         this.project = project;
         this.sessionStartMs = System.currentTimeMillis();
         this.mainPanel = new JBPanel<>(new BorderLayout());
-        
+
         initializeUI();
         registerListener();
-        
+
         // Initial update with placeholder data
         updateWithPlaceholder();
     }
@@ -69,23 +70,23 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
     private void initializeUI() {
         mainPanel.setBackground(JBColor.namedColor("Panel.background", new Color(0x2B, 0x2B, 0x2B)));
         mainPanel.setBorder(JBUI.Borders.empty(8));
-        
+
         // === HERO SCORE CARD ===
         heroCard = new HeroScoreCard();
         mainPanel.add(heroCard, BorderLayout.NORTH);
-        
+
         // === TABBED CONTENT ===
         tabbedPane = new JBTabbedPane();
         tabbedPane.setTabPlacement(SwingConstants.TOP);
-        
+
         metricsTab = new MetricsTabPanel();
         activityTab = new ActivityTabPanel(project);
         graphTab = new GraphTabPanel(project);
-        
+
         tabbedPane.addTab("Metrics", metricsTab);
         tabbedPane.addTab("Activity", activityTab);
         tabbedPane.addTab("Graph", graphTab);
-        
+
         // Add settings button as a tab (hacky but works)
         JBPanel<?> settingsPlaceholder = new JBPanel<>();
         tabbedPane.addTab("⚙", settingsPlaceholder);
@@ -96,9 +97,9 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
                 tabbedPane.setSelectedIndex(0); // Switch back
             }
         });
-        
+
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
-        
+
         // === SESSION FOOTER ===
         JBPanel<?> footerPanel = createFooterPanel();
         mainPanel.add(footerPanel, BorderLayout.SOUTH);
@@ -108,24 +109,24 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
         JBPanel<?> footer = new JBPanel<>(new BorderLayout());
         footer.setBackground(JBColor.namedColor("Panel.background", new Color(0x25, 0x25, 0x25)));
         footer.setBorder(JBUI.Borders.empty(8, 0, 0, 0));
-        
+
         sessionLabel = new JBLabel("Session: 00:00:00");
         sessionLabel.setForeground(JBColor.namedColor("Label.foreground", new Color(0xA9, 0xB7, 0xC6)));
         sessionLabel.setFont(sessionLabel.getFont().deriveFont(11f));
-        
+
         footer.add(sessionLabel, BorderLayout.WEST);
-        
+
         // Start timer to update session duration
         Timer sessionTimer = new Timer(1000, e -> updateSessionDuration());
         sessionTimer.start();
-        
+
         return footer;
     }
 
     private void registerListener() {
         SnapshotScheduler scheduler = ApplicationManager.getApplication()
                 .getService(SnapshotScheduler.class);
-        
+
         if (scheduler != null) {
             scheduler.addListener(this);
         }
@@ -136,14 +137,14 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
         // Update UI on EDT
         SwingUtilities.invokeLater(() -> {
             lastResult = result;
-            
+
             // Update hero card
             heroCard.updateScore(
                     (int)(result.getFlowTally() * 100),
                     result.getState(),
                     calculateTrend(result)
             );
-            
+
             // Update metrics tab
             metricsTab.updateMetrics(
                     result.getTypingScore(),
@@ -152,7 +153,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
                     result.getBuildScore(),
                     result.getActivityScore()
             );
-            
+
             // Update activity tab
             activityTab.updateActivity(metrics);
         });
@@ -162,7 +163,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
         // Simple trend calculation - compare to last result
         // Positive = improving, negative = declining
         if (lastResult == null) return 0;
-        
+
         double diff = result.getFlowTally() - lastResult.getFlowTally();
         return (int)(diff * 100);
     }
@@ -172,7 +173,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
         long hours = elapsed / 3600000;
         long minutes = (elapsed % 3600000) / 60000;
         long seconds = (elapsed % 60000) / 1000;
-        
+
         sessionLabel.setText(String.format("Session: %02d:%02d:%02d", hours, minutes, seconds));
     }
 
@@ -194,7 +195,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
     public void refresh() {
         SnapshotScheduler scheduler = ApplicationManager.getApplication()
                 .getService(SnapshotScheduler.class);
-        
+
         if (scheduler != null) {
             FlowDetectionResult result = scheduler.triggerImmediateSnapshot();
             if (result != null) {
