@@ -4,6 +4,15 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/dev/therapeutic-dev-2" />
+        <option name="gradleJvm" value="jbrsdk_jcef-21" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/dev/therapeutic-dev-2" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/dev/therepeutic-dev" />
         <option name="gradleJvm" value="jbrsdk_jcef-21" />
         <option name="modules">
