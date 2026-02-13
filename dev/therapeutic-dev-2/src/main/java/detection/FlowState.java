@@ -33,5 +33,6 @@ public enum FlowState {
         this.displayName=displayName;
         this.minimumScore=minimumScore;
     }
+    public String getDisplayName;
 
 }

@@ -7,7 +7,7 @@
 
     <description><![CDATA[
     <p>Detects developer flow states through real-time IDE metrics and suggests intelligent break timing.</p>
-    
+
     <p><strong>Features:</strong></p>
     <ul>
         <li>Real-time flow state detection using typing patterns, errors, and context switching</li>
@@ -15,7 +15,7 @@
         <li>Activity heatmap showing file focus distribution</li>
         <li>Configurable detection sensitivity and break intervals</li>
     </ul>
-    
+
     <p><em>Part of Final Year Project research at Brunel University London.</em></p>
     ]]></description>
 
@@ -38,15 +38,11 @@
 
     <extensions defaultExtensionNs="com.intellij">
 
-        <!-- ==================== SERVICES ==================== -->
+        <!-- ==================== STARTUP ==================== -->
 
-        <!-- MetricCollector: Central metrics aggregation -->
-        <applicationService
-                serviceImplementation="com.ronin.therapeuticdev.services.MetricCollector"/>
-
-        <!-- SnapshotScheduler: Periodic flow detection -->
-        <applicationService
-                serviceImplementation="com.ronin.therapeuticdev.services.SnapshotScheduler"/>
+        <!-- Kicks off the SnapshotScheduler when a project opens -->
+        <postStartupActivity
+                implementation="com.ronin.therapeuticdev.TherapeuticDevStartup"/>
 
         <!-- ==================== LISTENERS ==================== -->
 
@@ -79,7 +75,7 @@
                 id="com.ronin.therapeuticdev.settings"
                 displayName="Therapeutic Dev"/>
 
-        <!-- Persistent Settings State -->
+        <!-- Persistent Settings State (ONLY if TherapeuticDevSettings does NOT have @Service annotation) -->
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.settings.TherapeuticDevSettings"/>
 
