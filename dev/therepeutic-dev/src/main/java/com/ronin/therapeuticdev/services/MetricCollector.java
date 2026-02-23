@@ -5,7 +5,11 @@ import com.intellij.openapi.Disposable;
 import com.ronin.therapeuticdev.metrics.FlowMetrics;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,6 +57,14 @@ public final class MetricCollector implements Disposable {
     private final AtomicInteger focusLostCount = new AtomicInteger(0);
     private final AtomicLong currentFileStartMs = new AtomicLong(0);
     private volatile String currentFilePath = "";
+
+    /** Completed file visits for the heatmap (path, startMs, endMs) */
+    private final Deque<long[]> completedVisits = new ConcurrentLinkedDeque<>();
+    /** Stores filename strings parallel to completedVisits */
+    private final Deque<String> completedVisitPaths = new ConcurrentLinkedDeque<>();
+    /** Switch timestamps for the timeline (last 30 min) */
+    private final Deque<Long> fileSwitchTimestamps = new ConcurrentLinkedDeque<>();
+    private static final long ACTIVITY_WINDOW_MS = 30 * 60 * 1000L; // 30 minutes
     
     // ==================== BUILD METRICS ====================
     private final AtomicBoolean lastBuildSuccess = new AtomicBoolean(true);
@@ -136,6 +148,27 @@ public final class MetricCollector implements Disposable {
      * Called by FileActivityListener.
      */
     public void recFileChange(long timestampMs, String newFilePath) {
+        // Complete the previous file's visit
+        String prevPath = currentFilePath;
+        long prevStart = currentFileStartMs.get();
+        if (!prevPath.isEmpty() && prevStart > 0) {
+            completedVisits.addLast(new long[]{prevStart, timestampMs});
+            completedVisitPaths.addLast(prevPath);
+            // Prune visits older than the activity window
+            long cutoff = timestampMs - ACTIVITY_WINDOW_MS;
+            while (!completedVisits.isEmpty() && completedVisits.peekFirst()[1] < cutoff) {
+                completedVisits.pollFirst();
+                completedVisitPaths.pollFirst();
+            }
+        }
+
+        // Record the switch timestamp for the timeline
+        fileSwitchTimestamps.addLast(timestampMs);
+        long switchCutoff = timestampMs - ACTIVITY_WINDOW_MS;
+        while (!fileSwitchTimestamps.isEmpty() && fileSwitchTimestamps.peekFirst() < switchCutoff) {
+            fileSwitchTimestamps.pollFirst();
+        }
+
         fileChangeCount.incrementAndGet();
         currentFileStartMs.set(timestampMs);
         currentFilePath = newFilePath;
@@ -299,6 +332,60 @@ public final class MetricCollector implements Disposable {
         // Note: keystroke counts are cumulative for KPM calculation
         // Note: syntax errors reflect current state, not reset
         // Note: build streak persists across intervals
+    }
+
+    // ==================== FILE ACTIVITY DATA ====================
+
+    /**
+     * Returns a snapshot of file switch timestamps within the last 30 minutes.
+     * Used by ActivityTabPanel to render the switch timeline.
+     */
+    public List<Long> getFileSwitchTimestamps() {
+        return new ArrayList<>(fileSwitchTimestamps);
+    }
+
+    /**
+     * Returns time spent per filename within the given window (ms).
+     * Includes the current in-progress file visit.
+     * Used by ActivityTabPanel to render the file heatmap.
+     */
+    public Map<String, Long> getFileActivityMap(long windowMs) {
+        long now = System.currentTimeMillis();
+        long cutoff = now - windowMs;
+        Map<String, Long> result = new LinkedHashMap<>();
+
+        // Walk completed visits in parallel with their paths
+        java.util.Iterator<long[]> visitIter = completedVisits.iterator();
+        java.util.Iterator<String> pathIter = completedVisitPaths.iterator();
+        while (visitIter.hasNext() && pathIter.hasNext()) {
+            long[] visit = visitIter.next();
+            String path = pathIter.next();
+            long endMs = visit[1];
+            if (endMs < cutoff) continue;
+            long effectiveStart = Math.max(visit[0], cutoff);
+            long duration = endMs - effectiveStart;
+            if (duration > 0) {
+                result.merge(extractFilename(path), duration, Long::sum);
+            }
+        }
+
+        // Include the current in-progress file
+        String current = currentFilePath;
+        long currentStart = currentFileStartMs.get();
+        if (!current.isEmpty() && currentStart > 0) {
+            long effectiveStart = Math.max(currentStart, cutoff);
+            long duration = now - effectiveStart;
+            if (duration > 0) {
+                result.merge(extractFilename(current), duration, Long::sum);
+            }
+        }
+
+        return result;
+    }
+
+    private String extractFilename(String path) {
+        int idx = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return idx >= 0 ? path.substring(idx + 1) : path;
     }
 
     // ==================== GETTERS FOR UI ====================

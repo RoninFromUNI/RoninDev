@@ -13,8 +13,10 @@ import com.ronin.therapeuticdev.settings.TherapeuticDevSettings;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Comparator;
 
 /**
  * Activity tab showing file heatmap and context switch timeline.
@@ -52,8 +54,6 @@ public class ActivityTabPanel extends JBPanel<ActivityTabPanel> {
     private JBPanel<?> heatmapPanel;
     private SwitchTimelinePanel timelinePanel;
     
-    // Track file activity (filename -> percentage)
-    private final Map<String, Integer> fileActivity = new LinkedHashMap<>();
     private int contextSwitchCount = 0;
 
     public ActivityTabPanel(Project project) {
@@ -228,11 +228,11 @@ public class ActivityTabPanel extends JBPanel<ActivityTabPanel> {
     }
 
     /**
-     * Updates the activity display with new metrics.
+     * Updates the activity display with live data from MetricCollector.
      */
     public void updateActivity(FlowMetrics metrics) {
         contextSwitchCount = metrics.getFileChangesLast5Min();
-        
+
         // Update warning banner
         TherapeuticDevSettings settings = TherapeuticDevSettings.getInstance();
         if (contextSwitchCount >= settings.contextSwitchWarningThreshold) {
@@ -241,13 +241,49 @@ public class ActivityTabPanel extends JBPanel<ActivityTabPanel> {
         } else {
             warningBanner.setVisible(false);
         }
-        
-        // Update timeline
-        timelinePanel.addSwitch();
+
+        // Pull live data directly from MetricCollector
+        MetricCollector collector = ApplicationManager.getApplication()
+                .getService(MetricCollector.class);
+        if (collector == null) return;
+
+        // Sync timeline with real switch timestamps
+        timelinePanel.setSwitchTimes(collector.getFileSwitchTimestamps());
         timelinePanel.repaint();
-        
-        // Note: Real file activity tracking would come from a FileActivityTracker service
-        // For now, this is placeholder functionality
+
+        // Rebuild heatmap from actual time-spent-per-file data
+        Map<String, Long> activityMap = collector.getFileActivityMap(30 * 60 * 1000L);
+        updateHeatmap(activityMap);
+    }
+
+    private void updateHeatmap(Map<String, Long> activityMap) {
+        heatmapPanel.removeAll();
+
+        if (activityMap.isEmpty()) {
+            addHeatmapEntry("No activity yet", 0);
+            heatmapPanel.revalidate();
+            heatmapPanel.repaint();
+            return;
+        }
+
+        long total = activityMap.values().stream().mapToLong(Long::longValue).sum();
+        if (total == 0) {
+            addHeatmapEntry("No activity yet", 0);
+            heatmapPanel.revalidate();
+            heatmapPanel.repaint();
+            return;
+        }
+
+        activityMap.entrySet().stream()
+                .sorted(Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
+                .limit(6)
+                .forEach(e -> {
+                    int pct = (int) ((e.getValue() * 100) / total);
+                    addHeatmapEntry(e.getKey(), pct);
+                });
+
+        heatmapPanel.revalidate();
+        heatmapPanel.repaint();
     }
 
     /**
@@ -256,20 +292,18 @@ public class ActivityTabPanel extends JBPanel<ActivityTabPanel> {
     private static class SwitchTimelinePanel extends JBPanel<SwitchTimelinePanel> {
         private static final Color TIMELINE_COLOR = new Color(0x6B, 0x73, 0x7C);
         private static final Color SWITCH_COLOR = new Color(0xF4, 0x43, 0x36);
-        
-        private final java.util.List<Long> switchTimes = new java.util.ArrayList<>();
+
+        private List<Long> switchTimes = new java.util.ArrayList<>();
         private final long windowMs = 30 * 60 * 1000; // 30 minutes
-        
+
         public SwitchTimelinePanel() {
             setOpaque(false);
             setPreferredSize(new Dimension(-1, JBUI.scale(30)));
         }
-        
-        public void addSwitch() {
-            switchTimes.add(System.currentTimeMillis());
-            // Remove old switches outside window
-            long cutoff = System.currentTimeMillis() - windowMs;
-            switchTimes.removeIf(t -> t < cutoff);
+
+        /** Replace the timeline with the actual switch timestamps from MetricCollector. */
+        public void setSwitchTimes(List<Long> times) {
+            switchTimes = times;
         }
         
         @Override
