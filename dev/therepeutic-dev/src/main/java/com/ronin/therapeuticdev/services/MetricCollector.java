@@ -5,7 +5,9 @@ import com.intellij.openapi.Disposable;
 import com.ronin.therapeuticdev.metrics.FlowMetrics;
 
 import java.time.Instant;
+import java.util.Deque;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +38,10 @@ public final class MetricCollector implements Disposable {
     private final AtomicLong lastKeystrokeTimeMs = new AtomicLong(0);
     private final AtomicLong totalKeyIntervalMs = new AtomicLong(0);
     private final AtomicInteger keyIntervalSamples = new AtomicInteger(0);
+
+    /** Sliding window for KPM — stores timestamps of recent keystrokes */
+    private final Deque<Long> recentKeyTimestamps = new ConcurrentLinkedDeque<>();
+    private static final long KPM_WINDOW_MS = 120_000; // 2-minute sliding window
     
     // ==================== ERROR METRICS ====================
     private final AtomicInteger syntaxErrorCount = new AtomicInteger(0);
@@ -72,7 +78,14 @@ public final class MetricCollector implements Disposable {
      */
     public void recKeystroke(long timestampMs) {
         keystrokeCount.incrementAndGet();
-        
+
+        // Add to sliding window and prune entries outside the window
+        recentKeyTimestamps.addLast(timestampMs);
+        long cutoff = timestampMs - KPM_WINDOW_MS;
+        while (!recentKeyTimestamps.isEmpty() && recentKeyTimestamps.peekFirst() < cutoff) {
+            recentKeyTimestamps.pollFirst();
+        }
+
         // Calculate interval from last keystroke for rhythm analysis
         long lastTime = lastKeystrokeTimeMs.getAndSet(timestampMs);
         if (lastTime > 0) {
@@ -176,14 +189,16 @@ public final class MetricCollector implements Disposable {
     // ==================== SNAPSHOT & CALCULATIONS ====================
 
     /**
-     * Calculates current keystrokes per minute.
+     * Calculates keystrokes per minute over a 2-minute sliding window.
+     * Reflects current typing rate rather than a diluted session average.
      */
     public double getKeystrokesPerMinute() {
-        long sessionMs = getSessionDurationMs();
-        if (sessionMs < 1000) return 0;
-        
-        double minutes = sessionMs / 60000.0;
-        return keystrokeCount.get() / minutes;
+        long now = System.currentTimeMillis();
+        long cutoff = now - KPM_WINDOW_MS;
+        long recentCount = recentKeyTimestamps.stream()
+                .filter(t -> t >= cutoff)
+                .count();
+        return recentCount / (KPM_WINDOW_MS / 60_000.0);
     }
 
     /**

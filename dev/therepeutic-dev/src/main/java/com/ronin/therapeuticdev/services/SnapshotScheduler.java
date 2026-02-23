@@ -36,11 +36,15 @@ public final class SnapshotScheduler implements Disposable {
 
     private static final Logger LOG = Logger.getInstance(SnapshotScheduler.class);
     
-    /** Interval between flow detection snapshots (seconds) */
-    private static final int SNAPSHOT_INTERVAL_SECONDS = 60;
-    
+    /** How often the UI receives fresh flow detection results (seconds) */
+    private static final int LIVE_REFRESH_SECONDS = 5;
+
+    /** How often interval counters reset and error scan runs (seconds) */
+    private static final int PERSIST_INTERVAL_SECONDS = 60;
+
     private final ScheduledExecutorService executor;
-    private ScheduledFuture<?> scheduledTask;
+    private ScheduledFuture<?> liveTask;
+    private ScheduledFuture<?> persistTask;
     private final FlowDetector detector;
     
     /** Listeners notified on each detection result */
@@ -62,21 +66,31 @@ public final class SnapshotScheduler implements Disposable {
     }
 
     /**
-     * Starts the periodic snapshot scheduler.
-     * Should be called when the plugin initializes.
+     * Starts the periodic scheduler.
+     * Two cycles run independently:
+     *  - Live refresh (every 5s): snapshot → detect → notify UI listeners
+     *  - Persist cycle (every 60s): error scan + interval counter reset
      */
     public void start() {
-        if (scheduledTask != null && !scheduledTask.isCancelled()) {
+        if (liveTask != null && !liveTask.isCancelled()) {
             LOG.warn("SnapshotScheduler already running");
             return;
         }
-        
-        LOG.info("Starting SnapshotScheduler with " + SNAPSHOT_INTERVAL_SECONDS + "s interval");
-        
-        scheduledTask = executor.scheduleAtFixedRate(
-                this::performSnapshot,
-                SNAPSHOT_INTERVAL_SECONDS,  // initial delay
-                SNAPSHOT_INTERVAL_SECONDS,  // period
+
+        LOG.info("Starting SnapshotScheduler — live refresh every " + LIVE_REFRESH_SECONDS
+                + "s, persist cycle every " + PERSIST_INTERVAL_SECONDS + "s");
+
+        liveTask = executor.scheduleAtFixedRate(
+                this::performLiveRefresh,
+                LIVE_REFRESH_SECONDS,   // short initial delay so UI populates quickly
+                LIVE_REFRESH_SECONDS,
+                TimeUnit.SECONDS
+        );
+
+        persistTask = executor.scheduleAtFixedRate(
+                this::performPersistCycle,
+                PERSIST_INTERVAL_SECONDS,
+                PERSIST_INTERVAL_SECONDS,
                 TimeUnit.SECONDS
         );
     }
@@ -85,41 +99,39 @@ public final class SnapshotScheduler implements Disposable {
      * Stops the periodic scheduler.
      */
     public void stop() {
-        if (scheduledTask != null) {
-            scheduledTask.cancel(false);
-            scheduledTask = null;
-            LOG.info("SnapshotScheduler stopped");
+        if (liveTask != null) {
+            liveTask.cancel(false);
+            liveTask = null;
         }
+        if (persistTask != null) {
+            persistTask.cancel(false);
+            persistTask = null;
+        }
+        LOG.info("SnapshotScheduler stopped");
     }
 
     /**
-     * Performs a single snapshot and detection cycle.
-     * Called periodically by the scheduler.
+     * Lightweight cycle: snapshot current metrics, run detection, push to UI.
+     * Does NOT reset interval counters or run the expensive error scan.
+     * Runs every {@value LIVE_REFRESH_SECONDS} seconds.
      */
-    private void performSnapshot() {
+    private void performLiveRefresh() {
         try {
             MetricCollector collector = ApplicationManager.getApplication()
                     .getService(MetricCollector.class);
-            
+
             if (collector == null) {
                 LOG.warn("MetricCollector service not available");
                 return;
             }
-            
-            // Update syntax error count from code analysis
-            ErrorHighlightListener.recordCurrentErrors();
-            
-            // Create snapshot
+
             FlowMetrics metrics = collector.snapshot();
-            
-            // Run detection
             FlowDetectionResult result = detector.detect(metrics);
             lastResult = result;
-            
-            LOG.debug("Flow detection: score=" + String.format("%.1f", result.getFlowTally() * 100) 
+
+            LOG.debug("Live refresh: score=" + String.format("%.1f", result.getFlowTally() * 100)
                     + ", state=" + result.getState());
-            
-            // Notify listeners
+
             for (FlowDetectionListener listener : listeners) {
                 try {
                     listener.onFlowDetected(result, metrics);
@@ -127,21 +139,39 @@ public final class SnapshotScheduler implements Disposable {
                     LOG.error("Error notifying flow detection listener", e);
                 }
             }
-            
-            // Reset interval counters for next snapshot
-            collector.resetIntervalCounters();
-            
         } catch (Exception e) {
-            LOG.error("Error during flow detection snapshot", e);
+            LOG.error("Error during live refresh", e);
         }
     }
 
     /**
-     * Triggers an immediate snapshot outside the regular schedule.
-     * Useful for manual refresh or when significant events occur.
+     * Heavy cycle: scans open files for syntax errors and resets interval counters.
+     * Runs every {@value PERSIST_INTERVAL_SECONDS} seconds.
+     */
+    private void performPersistCycle() {
+        try {
+            MetricCollector collector = ApplicationManager.getApplication()
+                    .getService(MetricCollector.class);
+
+            if (collector == null) return;
+
+            // Refresh syntax error count (scans all open files — kept at 60s)
+            ErrorHighlightListener.recordCurrentErrors();
+
+            // Reset interval-based counters (file switches, focus losses, compile errors)
+            collector.resetIntervalCounters();
+
+            LOG.debug("Persist cycle complete — interval counters reset");
+        } catch (Exception e) {
+            LOG.error("Error during persist cycle", e);
+        }
+    }
+
+    /**
+     * Triggers an immediate live refresh outside the regular schedule.
      */
     public FlowDetectionResult triggerImmediateSnapshot() {
-        performSnapshot();
+        performLiveRefresh();
         return lastResult;
     }
 
@@ -171,7 +201,7 @@ public final class SnapshotScheduler implements Disposable {
      * Checks if the scheduler is currently running.
      */
     public boolean isRunning() {
-        return scheduledTask != null && !scheduledTask.isCancelled();
+        return liveTask != null && !liveTask.isCancelled();
     }
 
     @Override

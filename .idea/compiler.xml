@@ -11,6 +11,11 @@
         <module name="portfolio-creative-webapp" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="therapeutic-dev-2" target="21" />
+      <module name="therapeutic-dev-2.main" target="21" />
+      <module name="therapeutic-dev-2.test" target="21" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
