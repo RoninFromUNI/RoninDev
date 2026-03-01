@@ -46,7 +46,7 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
                 BorderFactory.createLineBorder(CARD_BORDER, 1),
                 JBUI.Borders.empty(16)
         ));
-        setPreferredSize(new Dimension(-1, JBUI.scale(100)));
+        setPreferredSize(new Dimension(-1, JBUI.scale(115)));
 
         // === CENTER: Score + Trend ===
         JBPanel<?> centerPanel = new JBPanel<>(new FlowLayout(FlowLayout.CENTER, 10, 0));
@@ -72,7 +72,7 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
 
         stateBadge = createStateBadge();
         stateLabel = new JBLabel("NEUTRAL");
-        stateLabel.setFont(stateLabel.getFont().deriveFont(11f));
+        stateLabel.setFont(stateLabel.getFont().deriveFont(Font.BOLD, 16f));
         stateLabel.setForeground(JBColor.namedColor("Label.foreground", new Color(0xA9, 0xB7, 0xC6)));
 
         bottomPanel.add(stateBadge);
@@ -95,7 +95,7 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
                 g2.dispose();
             }
         };
-        badge.setPreferredSize(new Dimension(JBUI.scale(12), JBUI.scale(12)));
+        badge.setPreferredSize(new Dimension(JBUI.scale(18), JBUI.scale(18)));
         badge.setOpaque(false);
         return badge;
     }
@@ -125,8 +125,9 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
             trendLabel.setText("");
         }
 
-        // Update state badge
+        // Update state badge + label colour
         stateLabel.setText(state.name());
+        stateLabel.setForeground(getStateColor(state));
         stateBadge.repaint();
 
         // Update score color based on state

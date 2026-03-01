@@ -9,6 +9,8 @@ import com.ronin.therapeuticdev.detection.FlowDetector;
 import com.ronin.therapeuticdev.detection.FlowDetectionResult;
 import com.ronin.therapeuticdev.listeners.ErrorHighlightListener;
 import com.ronin.therapeuticdev.metrics.FlowMetrics;
+import com.ronin.therapeuticdev.settings.TherapeuticDevSettings;
+import com.ronin.therapeuticdev.storage.MetricRepository;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -37,7 +39,7 @@ public final class SnapshotScheduler implements Disposable {
     private static final Logger LOG = Logger.getInstance(SnapshotScheduler.class);
     
     /** How often the UI receives fresh flow detection results (seconds) */
-    private static final int LIVE_REFRESH_SECONDS = 5;
+    private static final int LIVE_REFRESH_SECONDS = 2;
 
     /** How often interval counters reset and error scan runs (seconds) */
     private static final int PERSIST_INTERVAL_SECONDS = 60;
@@ -145,7 +147,16 @@ public final class SnapshotScheduler implements Disposable {
     }
 
     /**
-     * Heavy cycle: scans open files for syntax errors and resets interval counters.
+     * Heavy cycle: scans open files for syntax errors, persists a snapshot, then
+     * resets interval counters so the next interval starts clean.
+     *
+     * Order matters:
+     *   1. Refresh error count (expensive scan — once per minute is enough)
+     *   2. Snapshot + detect with fresh error data
+     *   3. Persist (if enabled) — must happen BEFORE counter reset so interval
+     *      values (file switches, focus losses, compile errors) are captured
+     *   4. Reset interval counters
+     *
      * Runs every {@value PERSIST_INTERVAL_SECONDS} seconds.
      */
     private void performPersistCycle() {
@@ -155,10 +166,28 @@ public final class SnapshotScheduler implements Disposable {
 
             if (collector == null) return;
 
-            // Refresh syntax error count (scans all open files — kept at 60s)
+            // 1. Refresh syntax error count (scans all open files)
             ErrorHighlightListener.recordCurrentErrors();
 
-            // Reset interval-based counters (file switches, focus losses, compile errors)
+            // 2. Snapshot + detect with the freshly updated error count
+            FlowMetrics metrics = collector.snapshot();
+            FlowDetectionResult result = detector.detect(metrics);
+            lastResult = result;
+
+            // 3. Persist if enabled in settings
+            TherapeuticDevSettings settings = ApplicationManager.getApplication()
+                    .getService(TherapeuticDevSettings.class);
+            if (settings != null && settings.persistSnapshots) {
+                MetricRepository repo = ApplicationManager.getApplication()
+                        .getService(MetricRepository.class);
+                if (repo != null) {
+                    repo.saveSnapshot(metrics, result);
+                    LOG.debug("Snapshot persisted: state=" + result.getState()
+                            + " score=" + String.format("%.3f", result.getFlowTally()));
+                }
+            }
+
+            // 4. Reset interval-based counters (file switches, focus losses, compile errors)
             collector.resetIntervalCounters();
 
             LOG.debug("Persist cycle complete — interval counters reset");

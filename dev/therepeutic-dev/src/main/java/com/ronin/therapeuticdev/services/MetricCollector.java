@@ -401,6 +401,31 @@ public final class MetricCollector implements Disposable {
     public int getConsecutiveFailedBuilds() { return consecutiveFailedBuilds.get(); }
     public String getCurrentFilePath() { return currentFilePath; }
 
+    /**
+     * Returns the most recent file visits in reverse-chronological order.
+     * Each entry is: [filename, startMs, endMs]. Used by the vertical timeline.
+     */
+    public List<String[]> getRecentVisits(int max) {
+        List<String[]> result = new ArrayList<>();
+        // Walk both parallel deques together in reverse
+        Object[] visitArr = completedVisits.toArray();
+        String[] pathArr = completedVisitPaths.toArray(new String[0]);
+        // Use iterators and build a list first, then reverse
+        List<long[]> visits = new ArrayList<>(completedVisits);
+        List<String> paths = new ArrayList<>(completedVisitPaths);
+        for (int i = Math.min(visits.size(), paths.size()) - 1; i >= 0 && result.size() < max; i--) {
+            long[] v = visits.get(i);
+            result.add(new String[]{extractFilename(paths.get(i)), String.valueOf(v[0]), String.valueOf(v[1])});
+        }
+        // Also add current file as in-progress
+        String current = currentFilePath;
+        long currentStart = currentFileStartMs.get();
+        if (!current.isEmpty() && currentStart > 0 && result.size() < max) {
+            result.add(0, new String[]{extractFilename(current), String.valueOf(currentStart), "0"});
+        }
+        return result;
+    }
+
     @Override
     public void dispose() {
         // Cleanup - could persist final state here

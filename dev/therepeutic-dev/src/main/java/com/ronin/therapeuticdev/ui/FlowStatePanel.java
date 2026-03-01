@@ -13,8 +13,9 @@ import com.ronin.therapeuticdev.metrics.FlowMetrics;
 import com.ronin.therapeuticdev.services.MetricCollector;
 import com.ronin.therapeuticdev.services.SnapshotScheduler;
 import com.ronin.therapeuticdev.ui.components.HeroScoreCard;
+import com.ronin.therapeuticdev.ui.components.MediaControlPanel;
 import com.ronin.therapeuticdev.ui.tabs.ActivityTabPanel;
-import com.ronin.therapeuticdev.ui.tabs.GraphTabPanel;
+import com.ronin.therapeuticdev.ui.tabs.GraphAndProjectTab;
 import com.ronin.therapeuticdev.ui.tabs.MetricsTabPanel;
 
 import javax.swing.*;
@@ -48,7 +49,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
     private JBTabbedPane tabbedPane;
     private MetricsTabPanel metricsTab;
     private ActivityTabPanel activityTab;
-    private GraphTabPanel graphTab;
+    private GraphAndProjectTab graphAndProjectTab;
     private JBLabel sessionLabel;
 
     // State
@@ -81,11 +82,11 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
 
         metricsTab = new MetricsTabPanel();
         activityTab = new ActivityTabPanel(project);
-        graphTab = new GraphTabPanel(project);
+        graphAndProjectTab = new GraphAndProjectTab(project);
 
         tabbedPane.addTab("Metrics", metricsTab);
         tabbedPane.addTab("Activity", activityTab);
-        tabbedPane.addTab("Graph", graphTab);
+        tabbedPane.addTab("Graph & Project", graphAndProjectTab);
 
         // Add settings button as a tab (hacky but works)
         JBPanel<?> settingsPlaceholder = new JBPanel<>();
@@ -116,8 +117,15 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
 
         footer.add(sessionLabel, BorderLayout.WEST);
 
-        // Start timer to update session duration
-        Timer sessionTimer = new Timer(1000, e -> updateSessionDuration());
+        // Media controls (play/pause/skip for YouTube Music etc.)
+        MediaControlPanel mediaControls = new MediaControlPanel();
+        footer.add(mediaControls, BorderLayout.EAST);
+
+        // 1-second timer: updates session clock + live stat chips (KPM, idle, file)
+        Timer sessionTimer = new Timer(1000, e -> {
+            updateSessionDuration();
+            activityTab.updateLiveChips();
+        });
         sessionTimer.start();
 
         return footer;

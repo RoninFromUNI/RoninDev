@@ -79,6 +79,10 @@
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.settings.TherapeuticDevSettings"/>
 
+        <!-- Metrics persistence (SQLite) -->
+        <applicationService
+                serviceImplementation="com.ronin.therapeuticdev.storage.MetricRepository"/>
+
     </extensions>
 
     <!-- Project-level listeners (registered via listener topics) -->
