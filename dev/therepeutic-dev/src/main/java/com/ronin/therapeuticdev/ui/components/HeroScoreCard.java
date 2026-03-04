@@ -134,19 +134,18 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
         scoreLabel.setForeground(getStateColor(state));
     }
 
-    /**
-     * Maps FlowState to display color.
-     * Uses if-else chain to avoid switch expression exhaustiveness requirements.
-     */
+    /** Maps all 7 FlowState values to display colours. */
     private Color getStateColor(FlowState state) {
-        if (state == FlowState.FLOW) {
-            return FLOW_GREEN;
-        } else if (state == FlowState.PROCRASTINATING) {
-            return STRESS_RED;
-        } else {
-            // NEUTRAL or null fallback
-            return NEUTRAL_AMBER;
-        }
+        if (state == null) return NEUTRAL_AMBER;
+        return switch (state) {
+            case DEEP_FLOW       -> new Color(0x27, 0xAE, 0x60); // deep emerald
+            case FLOW            -> FLOW_GREEN;
+            case EMERGING        -> new Color(0x82, 0xE0, 0xAA); // pale green
+            case NEUTRAL         -> NEUTRAL_AMBER;
+            case DISRUPTED       -> new Color(0xE6, 0x7E, 0x22); // orange
+            case PROCRASTINATING -> STRESS_RED;
+            case NOT_IN_FLOW     -> new Color(0x95, 0xA5, 0xA6); // slate
+        };
     }
 
     @Override

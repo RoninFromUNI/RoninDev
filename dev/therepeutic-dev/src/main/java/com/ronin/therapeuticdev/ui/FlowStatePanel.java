@@ -12,6 +12,7 @@ import com.ronin.therapeuticdev.detection.FlowState; // ADDED: Missing import
 import com.ronin.therapeuticdev.metrics.FlowMetrics;
 import com.ronin.therapeuticdev.services.MetricCollector;
 import com.ronin.therapeuticdev.services.SnapshotScheduler;
+import com.ronin.therapeuticdev.ui.components.FlowSparklinePanel;
 import com.ronin.therapeuticdev.ui.components.HeroScoreCard;
 import com.ronin.therapeuticdev.ui.components.MediaControlPanel;
 import com.ronin.therapeuticdev.ui.tabs.ActivityTabPanel;
@@ -50,6 +51,7 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
     private MetricsTabPanel metricsTab;
     private ActivityTabPanel activityTab;
     private GraphAndProjectTab graphAndProjectTab;
+    private FlowSparklinePanel sparklinePanel;
     private JBLabel sessionLabel;
 
     // State
@@ -84,18 +86,29 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
         activityTab = new ActivityTabPanel(project);
         graphAndProjectTab = new GraphAndProjectTab(project);
 
-        tabbedPane.addTab("Metrics", metricsTab);
-        tabbedPane.addTab("Activity", activityTab);
-        tabbedPane.addTab("Graph & Project", graphAndProjectTab);
+        // History tab — sparkline panel wrapped in a card
+        sparklinePanel = new FlowSparklinePanel();
+        JBPanel<?> historyCard = new JBPanel<>(new BorderLayout());
+        historyCard.setBorder(JBUI.Borders.empty(12));
+        JBLabel sparklineHeader = new JBLabel("FLOW SCORE HISTORY  (last 60 readings)");
+        sparklineHeader.setFont(sparklineHeader.getFont().deriveFont(Font.BOLD, 10f));
+        sparklineHeader.setForeground(new Color(0xE5, 0xA8, 0x4B));
+        sparklineHeader.setBorder(JBUI.Borders.emptyBottom(8));
+        historyCard.add(sparklineHeader, BorderLayout.NORTH);
+        historyCard.add(sparklinePanel, BorderLayout.CENTER);
 
-        // Add settings button as a tab (hacky but works)
+        tabbedPane.addTab("Metrics",         metricsTab);
+        tabbedPane.addTab("Activity",         activityTab);
+        tabbedPane.addTab("History",          historyCard);
+        tabbedPane.addTab("Graph & Project",  graphAndProjectTab);
+
+        // Settings button as a tab (index 4)
         JBPanel<?> settingsPlaceholder = new JBPanel<>();
         tabbedPane.addTab("⚙", settingsPlaceholder);
         tabbedPane.addChangeListener(e -> {
-            if (tabbedPane.getSelectedIndex() == 3) {
-                // Open settings dialog
+            if (tabbedPane.getSelectedIndex() == 4) {
                 openSettings();
-                tabbedPane.setSelectedIndex(0); // Switch back
+                tabbedPane.setSelectedIndex(0);
             }
         });
 
@@ -164,6 +177,9 @@ public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
 
             // Update activity tab
             activityTab.updateActivity(metrics);
+
+            // Feed sparkline
+            sparklinePanel.addResult(result);
         });
     }
 

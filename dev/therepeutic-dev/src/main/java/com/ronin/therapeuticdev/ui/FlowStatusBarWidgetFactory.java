@@ -171,38 +171,28 @@ public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
 
         // ========== Helper Methods ==========
 
-        /**
-         * Returns emoji dot for state display.
-         * Uses if-else to avoid switch expression exhaustiveness issues.
-         */
+        /** Maps all 7 states to a coloured dot emoji. */
         private String getStateDot(FlowState state) {
-            if (state == null) {
-                return "○";
-            } else if (state == FlowState.FLOW) {
-                return "🟢";
-            } else if (state == FlowState.PROCRASTINATING) {
-                return "🔴";
-            } else {
-                // NEUTRAL fallback
-                return "🟡";
-            }
+            if (state == null) return "○";
+            return switch (state) {
+                case DEEP_FLOW, FLOW -> "🟢";
+                case EMERGING, NEUTRAL -> "🟡";
+                case DISRUPTED, PROCRASTINATING, NOT_IN_FLOW -> "🔴";
+            };
         }
 
-        /**
-         * Returns human-readable state description.
-         * Uses if-else to avoid switch expression exhaustiveness issues.
-         */
+        /** Maps all 7 states to a tooltip description. */
         private String getStateDescription(FlowState state) {
-            if (state == null) {
-                return "Unknown state";
-            } else if (state == FlowState.FLOW) {
-                return "Deep work - don't interrupt";
-            } else if (state == FlowState.PROCRASTINATING) {
-                return "High distraction / errors detected";
-            } else {
-                // NEUTRAL fallback
-                return "Normal activity";
-            }
+            if (state == null) return "Unknown state";
+            return switch (state) {
+                case DEEP_FLOW       -> "Peak focus — do not interrupt";
+                case FLOW            -> "Deep work — avoid interruptions";
+                case EMERGING        -> "Flow building — low priority interruptions ok";
+                case NEUTRAL         -> "Normal activity";
+                case DISRUPTED       -> "Recently interrupted — recovering focus";
+                case PROCRASTINATING -> "Low engagement / high distraction detected";
+                case NOT_IN_FLOW     -> "Disengaged";
+            };
         }
     }
 }
