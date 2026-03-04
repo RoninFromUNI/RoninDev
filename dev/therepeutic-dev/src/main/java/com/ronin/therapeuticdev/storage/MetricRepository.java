@@ -11,6 +11,7 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * SQLite persistence layer for flow metrics and detection results.
@@ -50,6 +51,10 @@ public class MetricRepository {
         try {
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
+            // WAL mode: better concurrent read performance, no extra library needed
+            try (Statement s = connection.createStatement()) {
+                s.execute("PRAGMA journal_mode=WAL");
+            }
             createTables();
             LOG.info("MetricRepository initialized at: " + dbPath);
         } catch (Exception e) {
@@ -103,14 +108,43 @@ public class MetricRepository {
             )
             """;
         
+        String createEsmTable = """
+            CREATE TABLE IF NOT EXISTS esm_responses (
+                id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                snapshot_id             INTEGER REFERENCES snapshots(id),
+                session_id              TEXT NOT NULL,
+                triggered_at            TEXT NOT NULL,
+                responded_at            TEXT,
+                -- 7-item Flow State Scale adapted for software development (1–5 Likert)
+                challenge_skill_balance INTEGER,
+                action_awareness_merging INTEGER,
+                clear_goals             INTEGER,
+                unambiguous_feedback    INTEGER,
+                concentration           INTEGER,
+                sense_of_control        INTEGER,
+                autotelic_experience    INTEGER,
+                -- Composite
+                composite_esm_score     REAL,
+                -- Open text
+                qualitative_note        TEXT,
+                -- AI context
+                using_ai_tools          INTEGER,
+                ai_tool_name            TEXT,
+                created_at              TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """;
+
         String createIndexes = """
             CREATE INDEX IF NOT EXISTS idx_session ON snapshots(session_id);
             CREATE INDEX IF NOT EXISTS idx_timestamp ON snapshots(timestamp);
             CREATE INDEX IF NOT EXISTS idx_flow_state ON snapshots(flow_state);
+            CREATE INDEX IF NOT EXISTS idx_esm_session ON esm_responses(session_id);
+            CREATE INDEX IF NOT EXISTS idx_esm_snapshot ON esm_responses(snapshot_id);
             """;
-        
+
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createSnapshotsTable);
+            stmt.execute(createEsmTable);
             for (String index : createIndexes.split(";")) {
                 if (!index.trim().isEmpty()) {
                     stmt.execute(index.trim());
@@ -314,6 +348,115 @@ public class MetricRepository {
                 rs.getString("manual_label")
         );
     }
+
+    /**
+     * Saves an ESM probe response, linking it to the most recent snapshot
+     * for the given session.
+     *
+     * @return the id of the inserted row, or -1 on failure
+     */
+    public long saveEsmResponse(EsmResponse r) {
+        // Resolve the latest snapshot id for this session
+        long snapshotId = -1;
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT id FROM snapshots WHERE session_id = ? ORDER BY timestamp DESC LIMIT 1")) {
+            ps.setString(1, r.sessionId());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) snapshotId = rs.getLong("id");
+        } catch (SQLException e) {
+            LOG.warn("Could not resolve snapshot id for ESM response: " + e.getMessage());
+        }
+
+        String sql = """
+            INSERT INTO esm_responses (
+                snapshot_id, session_id, triggered_at, responded_at,
+                challenge_skill_balance, action_awareness_merging, clear_goals,
+                unambiguous_feedback, concentration, sense_of_control,
+                autotelic_experience, composite_esm_score,
+                qualitative_note, using_ai_tools, ai_tool_name
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """;
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                sql, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setLong(1, snapshotId);
+            pstmt.setString(2, r.sessionId());
+            pstmt.setString(3, r.triggeredAt().toString());
+            pstmt.setString(4, r.respondedAt() != null ? r.respondedAt().toString() : null);
+            pstmt.setObject(5, r.challengeSkillBalance());
+            pstmt.setObject(6, r.actionAwarenessMerging());
+            pstmt.setObject(7, r.clearGoals());
+            pstmt.setObject(8, r.unambiguousFeedback());
+            pstmt.setObject(9, r.concentration());
+            pstmt.setObject(10, r.senseOfControl());
+            pstmt.setObject(11, r.autotelicExperience());
+            pstmt.setObject(12, r.compositeEsmScore());
+            pstmt.setString(13, r.qualitativeNote());
+            pstmt.setObject(14, r.usingAiTools() ? 1 : 0);
+            pstmt.setString(15, r.aiToolName());
+            pstmt.executeUpdate();
+            ResultSet keys = pstmt.getGeneratedKeys();
+            return keys.next() ? keys.getLong(1) : -1;
+        } catch (SQLException e) {
+            LOG.error("Failed to save ESM response", e);
+            return -1;
+        }
+    }
+
+    /**
+     * Retrieves all ESM responses for a session, ordered chronologically.
+     */
+    public List<EsmResponse> getEsmResponses(String sessionId) {
+        List<EsmResponse> result = new ArrayList<>();
+        String sql = "SELECT * FROM esm_responses WHERE session_id = ? ORDER BY triggered_at";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                result.add(new EsmResponse(
+                    rs.getString("session_id"),
+                    Instant.parse(rs.getString("triggered_at")),
+                    rs.getString("responded_at") != null ? Instant.parse(rs.getString("responded_at")) : null,
+                    rs.getObject("challenge_skill_balance", Integer.class),
+                    rs.getObject("action_awareness_merging", Integer.class),
+                    rs.getObject("clear_goals", Integer.class),
+                    rs.getObject("unambiguous_feedback", Integer.class),
+                    rs.getObject("concentration", Integer.class),
+                    rs.getObject("sense_of_control", Integer.class),
+                    rs.getObject("autotelic_experience", Integer.class),
+                    rs.getObject("composite_esm_score", Double.class),
+                    rs.getString("qualitative_note"),
+                    rs.getInt("using_ai_tools") == 1,
+                    rs.getString("ai_tool_name")
+                ));
+            }
+        } catch (SQLException e) {
+            LOG.error("Failed to retrieve ESM responses", e);
+        }
+        return result;
+    }
+
+    // ==================== RECORDS ====================
+
+    /**
+     * ESM probe response — 7-item Flow State Scale adapted for software development.
+     * All Likert items are Integer (nullable) to allow partial responses.
+     */
+    public record EsmResponse(
+        String  sessionId,
+        Instant triggeredAt,
+        Instant respondedAt,
+        Integer challengeSkillBalance,   // "Challenge matches my skill level"
+        Integer actionAwarenessMerging,  // "Coding just happens — not thinking about how"
+        Integer clearGoals,              // "I know what I want to accomplish next"
+        Integer unambiguousFeedback,     // "I can tell whether I am coding well"
+        Integer concentration,           // "I am completely focused"
+        Integer senseOfControl,          // "I feel in control of what I am coding"
+        Integer autotelicExperience,     // "I am doing this for the enjoyment of programming"
+        Double  compositeEsmScore,       // mean of non-null items, computed by dialog
+        String  qualitativeNote,
+        boolean usingAiTools,
+        String  aiToolName
+    ) {}
 
     /**
      * Closes the database connection.

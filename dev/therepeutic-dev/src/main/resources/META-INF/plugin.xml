@@ -83,6 +83,10 @@
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.storage.MetricRepository"/>
 
+        <!-- ESM probe delivery service -->
+        <applicationService
+                serviceImplementation="com.ronin.therapeuticdev.services.EsmProbeService"/>
+
     </extensions>
 
     <!-- Project-level listeners (registered via listener topics) -->
@@ -95,6 +99,10 @@
 
     <!-- Application-level listeners -->
     <applicationListeners>
+        <!-- AI suggestion heuristic (large document insertions) -->
+        <listener
+                class="com.ronin.therapeuticdev.listeners.AiSuggestionListener"
+                topic="com.intellij.openapi.editor.event.EditorFactoryListener"/>
         <!-- IDE focus tracking -->
         <listener
                 class="com.ronin.therapeuticdev.listeners.FocusListener"

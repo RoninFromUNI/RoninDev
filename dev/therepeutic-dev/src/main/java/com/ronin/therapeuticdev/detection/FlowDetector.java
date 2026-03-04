@@ -4,262 +4,270 @@ import com.ronin.therapeuticdev.metrics.FlowMetrics;
 
 /**
  * Core detection algorithm for flow state classification.
+ *
  * Applies weighted scoring across five metric categories:
- * 
- * - TYPING: 30% - Keystroke patterns and rhythm
- * - ERRORS: 25% - Syntax and compilation error rates
- * - FOCUS: 20% - File switching and IDE focus
- * - BUILDS: 15% - Build success/failure patterns
- * - ACTIVITY: 10% - Session duration and idle time
+ *   TYPING    30% — KPM, correction ratio, burst consistency
+ *   ERRORS    25% — intro/resolution trajectory, accumulation
+ *   FOCUS     20% — file dwell time, context switches, IDE focus
+ *   BUILDS    15% — success rate, frequency, streak
+ *   CONTEXT   10% — IDE focus %, AI acceptance signal
+ *
+ * The composite score [0.0, 1.0] maps to one of seven FlowState values.
  */
 public class FlowDetector {
 
     // Category weights (must sum to 1.0)
-    private double weightTyping = 0.30;
-    private double weightErr = 0.25;
-    private double weightFocus = 0.20;
-    private double weightBuilds = 0.15;
-    private double weightActivity = 0.10;
+    private double weightTyping  = 0.30;
+    private double weightErr     = 0.25;
+    private double weightFocus   = 0.20;
+    private double weightBuilds  = 0.15;
+    private double weightContext = 0.10;
 
     // Typing thresholds
-    private int kpmLow = 20;
+    private int kpmLow     = 20;
     private int kpmOptimal = 80;
-    private int kpmHigh = 150; // rushing
+    private int kpmHigh    = 150;
 
     // Focus thresholds
-    private int fileChangeTolerance = 5; // per 10 min window
-    private int focusLossTolerance = 3;
+    private int fileChangeTolerance = 5;
+    private int focusLossTolerance  = 3;
 
     // Error thresholds
-    private int syntaxErrTolerance = 3;
+    private int syntaxErrTolerance      = 3;
     private int compilationErrTolerance = 2;
 
     // Build thresholds
     private int buildFailTolerance = 2;
 
     // State classification thresholds
-    private double flowThreshold = 0.65;       // >= this = FLOW
-    private double procrastinateThreshold = 0.35; // <= this = PROCRASTINATING
+    private double deepFlowThreshold       = 0.80;
+    private double flowThreshold           = 0.65;
+    private double emergingThreshold       = 0.52;
+    private double neutralThreshold        = 0.40;
+    private double disruptedThreshold      = 0.28;
+    private double procrastinatingThreshold = 0.15;
+    // below procrastinatingThreshold → NOT_IN_FLOW
 
-    /**
-     * Performs flow detection on a metrics snapshot.
-     *
-     * @param metrics current FlowMetrics snapshot
-     * @return FlowDetectionResult with scores and state
-     */
-    public FlowDetectionResult detect(FlowMetrics metrics) {
-        // Calculate individual category scores (0.0 - 1.0)
-        double typingScore = normaliseTypScore(metrics);
-        double errScore = normaliseErrorScore(metrics);
-        double focusScore = normaliseFocusScore(metrics);
-        double buildScore = normaliseBuildScore(metrics);
-        double activityScore = normaliseActivityScore(metrics);
+    // ==================== MAIN DETECT ====================
 
-        // Apply weights and sum
-        double flowTally = (typingScore * weightTyping)
-                + (errScore * weightErr)
-                + (focusScore * weightFocus)
-                + (buildScore * weightBuilds)
-                + (activityScore * weightActivity);
+    public FlowDetectionResult detect(FlowMetrics m) {
+        double typing   = normaliseTypScore(m);
+        double errors   = normaliseErrorScore(m);
+        double focus    = normaliseFocusScore(m);
+        double build    = normaliseBuildScore(m);
+        double context  = normaliseContextScore(m);
 
-        // Classify state based on tally
-        FlowState state;
-        if (flowTally >= flowThreshold) {
-            state = FlowState.FLOW;
-        } else if (flowTally <= procrastinateThreshold) {
-            state = FlowState.PROCRASTINATING;
-        } else {
-            state = FlowState.NEUTRAL;
-        }
+        double composite = (typing  * weightTyping)
+                         + (errors  * weightErr)
+                         + (focus   * weightFocus)
+                         + (build   * weightBuilds)
+                         + (context * weightContext);
+        composite = Math.max(0.0, Math.min(1.0, composite));
 
-        return new FlowDetectionResult(
-                typingScore, errScore, focusScore, buildScore, activityScore, flowTally, state
-        );
+        FlowState state = mapToState(composite);
+
+        return new FlowDetectionResult(typing, errors, focus, build, context, composite, state);
     }
 
+    // ==================== STATE MAPPING ====================
+
+    private FlowState mapToState(double score) {
+        if (score >= deepFlowThreshold)        return FlowState.DEEP_FLOW;
+        if (score >= flowThreshold)            return FlowState.FLOW;
+        if (score >= emergingThreshold)        return FlowState.EMERGING;
+        if (score >= neutralThreshold)         return FlowState.NEUTRAL;
+        if (score >= disruptedThreshold)       return FlowState.DISRUPTED;
+        if (score >= procrastinatingThreshold) return FlowState.PROCRASTINATING;
+        return FlowState.NOT_IN_FLOW;
+    }
+
+    // ==================== TYPING SCORE ====================
+
     /**
-     * Normalises typing metrics to 0.0-1.0 score.
-     * Considers KPM and backspace ratio.
+     * Combines KPM bell-curve, correction ratio, and burst consistency.
+     * KPM 50%  ·  correction ratio 30%  ·  burst consistency 20%
      */
-    private double normaliseTypScore(FlowMetrics metrics) {
-        int kpm = metrics.getKeystrokesPerMin();
-        int bckSpaces = metrics.getBackspaceCount();
+    private double normaliseTypScore(FlowMetrics m) {
+        int    kpm        = m.getKeystrokesPerMin();
+        int    backspaces = m.getBackspaceCount();
+        double burst      = m.getBurstConsistency(); // already [0,1]
 
+        // --- KPM bell curve ---
         double kpmScore;
-
-        // Below minimum threshold (poor score -> idle or stuck)
         if (kpm < kpmLow) {
             kpmScore = (kpm / (double) kpmLow) * 0.3;
-        }
-        // Optimal range (full score)
-        else if (kpm >= kpmLow && kpm <= kpmOptimal) {
+        } else if (kpm <= kpmOptimal) {
             double range = kpmOptimal - kpmLow;
-            double pos = kpm - kpmLow;
+            double pos   = kpm - kpmLow;
             kpmScore = 0.3 + (pos / range) * 0.7;
-        }
-        // Above optimal but below high (slight degradation)
-        else if (kpm > kpmOptimal && kpm <= kpmHigh) {
+        } else if (kpm <= kpmHigh) {
             double range = kpmHigh - kpmOptimal;
-            double pos = kpm - kpmOptimal;
+            double pos   = kpm - kpmOptimal;
             kpmScore = 1.0 - (pos / range) * 0.4;
-        }
-        // Above high threshold (rushing)
-        else {
+        } else {
             double excess = kpm - kpmHigh;
-            double penalty = excess / 100.0;
-            kpmScore = Math.max(0.3, 0.6 - penalty);
+            kpmScore = Math.max(0.3, 0.6 - excess / 100.0);
         }
 
-        // Backspace penalty
-        double totalKeys = (kpm > 0) ? kpm : 1;
-        double backspcRatio = bckSpaces / totalKeys;
-        double backspcPenalty = Math.min(backspcRatio * 2, 0.3);
+        // --- Correction ratio (backspaces / total keys) ---
+        double totalKeys   = Math.max(kpm, 1.0);
+        double bsRatio     = backspaces / totalKeys;
+        double corrPenalty = Math.min(bsRatio * 2.0, 0.3);
+        double corrScore   = Math.max(0.0, 1.0 - corrPenalty);
 
-        return Math.max(0.0, kpmScore - backspcPenalty);
+        // Weighted combination
+        return (kpmScore * 0.50) + (corrScore * 0.30) + (burst * 0.20);
     }
 
+    // ==================== ERROR SCORE ====================
+
     /**
-     * Normalises error metrics to 0.0-1.0 score.
+     * Rewards tight error cycles (introduced AND resolved = TDD-style).
+     * Penalises accumulation (introduced but not resolved).
+     * Falls back to raw count when no intro/resolution data is available yet.
      */
-    private double normaliseErrorScore(FlowMetrics metrics) {
-        int syntaxErrs = metrics.getSyntaxErrorCount();
-        int compilationErrs = metrics.getCompilationErrors();
+    private double normaliseErrorScore(FlowMetrics m) {
+        int introduced = m.getErrorsIntroduced();
+        int resolved   = m.getErrorsResolved();
+        int syntaxErrs = m.getSyntaxErrorCount();
+        int compErrs   = m.getCompilationErrors();
 
         double score = 1.0;
 
-        // Syntax error penalty
-        if (syntaxErrs > syntaxErrTolerance) {
-            int excess = syntaxErrs - syntaxErrTolerance;
-            double syntaxPenalty = Math.min(excess * 0.1, 0.4);
-            score -= syntaxPenalty;
+        if (introduced > 0 || resolved > 0) {
+            // Intro/resolution model
+            int netAccumulation = introduced - resolved;
+            if (netAccumulation > 0) {
+                // Errors accumulating — penalise
+                score -= Math.min(netAccumulation * 0.12, 0.5);
+            } else if (netAccumulation < 0 || (introduced > 0 && resolved >= introduced)) {
+                // Resolving more than introducing (or tight cycle) — bonus
+                score = Math.min(1.0, score + 0.10);
+            }
+        } else {
+            // Fallback: raw count penalties
+            if (syntaxErrs > syntaxErrTolerance) {
+                score -= Math.min((syntaxErrs - syntaxErrTolerance) * 0.10, 0.40);
+            }
+            if (compErrs > compilationErrTolerance) {
+                score -= Math.min((compErrs - compilationErrTolerance) * 0.15, 0.50);
+            }
         }
 
-        // Compilation error penalty
-        if (compilationErrs > compilationErrTolerance) {
-            int excess = compilationErrs - compilationErrTolerance;
-            double compilationPenalty = Math.min(excess * 0.15, 0.5);
-            score -= compilationPenalty;
-        }
-
-        // Bonus for error-free streak (10+ minutes)
-        long timeSinceError = metrics.getTimeSinceLastErrorMs();
-        if (timeSinceError > 600000) {
-            score = Math.min(1.0, score + 0.1);
+        // Error-free streak bonus (10+ minutes clean)
+        if (m.getTimeSinceLastErrorMs() > 600_000L) {
+            score = Math.min(1.0, score + 0.10);
         }
 
         return Math.max(0.0, score);
     }
 
-    /**
-     * Normalises focus metrics to 0.0-1.0 score.
-     */
-    private double normaliseFocusScore(FlowMetrics metrics) {
-        int fileChanges = metrics.getFileChangesLast5Min();
-        long timeInFile = metrics.getTimeInCurrentFileMs();
-        int focusLosses = metrics.getFocusLossCount();
+    // ==================== FOCUS SCORE ====================
+
+    private double normaliseFocusScore(FlowMetrics m) {
+        int  fileChanges = m.getFileChangesLast5Min();
+        long timeInFile  = m.getTimeInCurrentFileMs();
+        int  focusLosses = m.getFocusLossCount();
 
         double score = 1.0;
 
-        // File switching penalty
         if (fileChanges > fileChangeTolerance) {
-            int excess = fileChanges - fileChangeTolerance;
-            double focusPenalty = Math.min(excess * 0.1, 0.3);
-            score -= focusPenalty;
+            score -= Math.min((fileChanges - fileChangeTolerance) * 0.10, 0.30);
         }
-
-        // Focus loss penalty
         if (focusLosses > focusLossTolerance) {
-            int excess = focusLosses - focusLossTolerance;
-            double focusPenalty = Math.min(excess * 0.1, 0.3);
-            score -= focusPenalty;
+            score -= Math.min((focusLosses - focusLossTolerance) * 0.10, 0.30);
         }
-
-        // Bonus for sustained focus (2+ minutes in one file)
-        if (timeInFile > 120000) {
+        // Sustained dwell bonus (2+ min in same file)
+        if (timeInFile > 120_000L) {
             score = Math.min(1.0, score + 0.15);
         }
 
         return Math.max(0.0, score);
     }
 
-    /**
-     * Normalises build metrics to 0.0-1.0 score.
-     */
-    private double normaliseBuildScore(FlowMetrics metrics) {
-        boolean lastBuildSuccess = metrics.isLastBuildSuccess();
-        int consecutiveFails = metrics.getConsecutiveFailedBuilds();
-        long timeSinceBuild = metrics.getTimeSinceLastBuildMs();
+    // ==================== BUILD SCORE ====================
 
+    /**
+     * Uses per-interval build success rate and count where available,
+     * falls back to lastBuildSuccess/consecutive-fail streak otherwise.
+     */
+    private double normaliseBuildScore(FlowMetrics m) {
         double score = 1.0;
 
-        // Last build failed penalty
-        if (!lastBuildSuccess) {
-            score -= 0.3;
+        if (m.getBuildsInWindow() > 0) {
+            // Prefer per-interval success rate
+            double rate = m.getBuildSuccessRate();
+            if (rate < 1.0) {
+                score -= (1.0 - rate) * 0.5; // up to -0.5 for all-fail interval
+            }
+            // Moderate frequency bonus (1–3 builds/interval = good cadence)
+            int builds = m.getBuildsInWindow();
+            if (builds >= 1 && builds <= 3) score = Math.min(1.0, score + 0.05);
+        } else {
+            // No builds this interval — use last known result + streak
+            if (!m.isLastBuildSuccess()) score -= 0.30;
+            int streak = m.getConsecutiveFailedBuilds();
+            if (streak > buildFailTolerance) {
+                score -= Math.min((streak - buildFailTolerance) * 0.15, 0.40);
+            }
         }
 
-        // Consecutive failure penalty
-        if (consecutiveFails > buildFailTolerance) {
-            int excess = consecutiveFails - buildFailTolerance;
-            double failPenalty = Math.min(excess * 0.15, 0.4);
-            score -= failPenalty;
-        }
+        // Long time since any build
+        long sinceLastBuild = m.getTimeSinceLastBuildMs();
+        if (sinceLastBuild > 1_800_000L) score -= 0.10; // 30+ min, no build
 
-        // Long time since build penalty
-        if (timeSinceBuild > 1800000) { // 30+ minutes
-            score -= 0.1;
-        }
-
-        // Recent successful build bonus
-        if (lastBuildSuccess && timeSinceBuild < 300000) { // within 5 min
-            score = Math.min(1.0, score + 0.1);
+        // Recent success bonus
+        if (m.isLastBuildSuccess() && sinceLastBuild < 300_000L) {
+            score = Math.min(1.0, score + 0.10);
         }
 
         return Math.max(0.0, score);
     }
 
+    // ==================== CONTEXT SCORE ====================
+
     /**
-     * Normalises activity metrics to 0.0-1.0 score.
+     * Combines IDE focus percentage and the AI acceptance heuristic.
+     * High IDE focus + non-zero AI acceptances → developer is engaged and using tools.
      */
-    private double normaliseActivityScore(FlowMetrics metrics) {
-        long sessionDuration = metrics.getSessionDurationMs() / 1000; // convert to seconds
-        long keyboardIdle = metrics.getKeyboardIdleMs();
+    private double normaliseContextScore(FlowMetrics m) {
+        double ideFocus = m.getIdeFocusPct(); // already [0,1]
+        int    aiAcc    = m.getAiSuggestionsAccepted();
+        long   session  = m.getSessionDurationMs() / 1000;
 
-        double score = 1.0;
+        // Early session: not enough data — return neutral
+        if (session < 60) return 0.5;
 
-        // Just started - return neutral
-        if (sessionDuration < 60) {
-            return 0.5;
-        }
+        double score = ideFocus; // base: how focused in the IDE
 
-        // Idle penalty (2+ minutes)
-        if (keyboardIdle > 120000) {
-            double idlePenalty = Math.min((keyboardIdle - 120000) / 300000.0, 0.5);
+        // Small bonus when AI tools are being used productively
+        // (accepting completions = engaged with code generation)
+        if (aiAcc > 0) score = Math.min(1.0, score + 0.05);
+
+        // Idle penalty (keyboard dormant > 2 min)
+        if (m.getKeyboardIdleMs() > 120_000L) {
+            double idlePenalty = Math.min((m.getKeyboardIdleMs() - 120_000L) / 300_000.0, 0.5);
             score -= idlePenalty;
         }
 
-        // Sustained session bonus (15+ minutes active)
-        if (sessionDuration > 900 && keyboardIdle < 60000) {
-            score = Math.min(1.0, score + 0.1);
+        // Sustained active session bonus (15+ min, not idle)
+        if (session > 900 && m.getKeyboardIdleMs() < 60_000L) {
+            score = Math.min(1.0, score + 0.10);
         }
 
         return Math.max(0.0, score);
     }
 
-    // Setters for configurable thresholds (used by settings)
+    // ==================== THRESHOLD SETTERS ====================
 
-    public void setFlowThreshold(double threshold) {
-        this.flowThreshold = threshold;
-    }
+    public void setFlowThreshold(double t)           { this.flowThreshold = t; }
+    public void setProcrastinateThreshold(double t)  { this.procrastinatingThreshold = t; }
 
-    public void setProcrastinateThreshold(double threshold) {
-        this.procrastinateThreshold = threshold;
-    }
-
-    public void setWeights(double typing, double errors, double focus, double builds, double activity) {
-        this.weightTyping = typing;
-        this.weightErr = errors;
-        this.weightFocus = focus;
-        this.weightBuilds = builds;
-        this.weightActivity = activity;
+    public void setWeights(double typing, double errors, double focus, double builds, double context) {
+        this.weightTyping  = typing;
+        this.weightErr     = errors;
+        this.weightFocus   = focus;
+        this.weightBuilds  = builds;
+        this.weightContext = context;
     }
 }

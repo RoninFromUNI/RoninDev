@@ -11,6 +11,7 @@ import com.ronin.therapeuticdev.listeners.ErrorHighlightListener;
 import com.ronin.therapeuticdev.metrics.FlowMetrics;
 import com.ronin.therapeuticdev.settings.TherapeuticDevSettings;
 import com.ronin.therapeuticdev.storage.MetricRepository;
+import com.ronin.therapeuticdev.services.EsmProbeService;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -189,6 +190,11 @@ public final class SnapshotScheduler implements Disposable {
 
             // 4. Reset interval-based counters (file switches, focus losses, compile errors)
             collector.resetIntervalCounters();
+
+            // 5. Check whether an ESM probe should be delivered
+            EsmProbeService esm = ApplicationManager.getApplication()
+                    .getService(EsmProbeService.class);
+            if (esm != null) esm.checkAndDeliver(result);
 
             LOG.debug("Persist cycle complete — interval counters reset");
         } catch (Exception e) {
