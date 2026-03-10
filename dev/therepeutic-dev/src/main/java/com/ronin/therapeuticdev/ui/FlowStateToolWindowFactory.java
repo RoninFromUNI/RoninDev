@@ -12,10 +12,8 @@ import org.jetbrains.annotations.NotNull;
  * Factory for creating the Therapeutic Dev tool window.
  *
  * <p>Registered in plugin.xml, instantiated by IntelliJ when
- * the tool window is first accessed.
- *
- * <p>If no participant ID has been set, shows ParticipantSetupPanel first.
- * Once confirmed, swaps to the main FlowStatePanel.
+ * the tool window is first accessed. If no participant ID is set,
+ * shows the setup screen first.
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/tool-windows.html">
  *      IntelliJ Platform SDK - Tool Windows</a>
@@ -51,7 +49,6 @@ public class FlowStateToolWindowFactory implements ToolWindowFactory {
                 "",
                 false
         );
-
         toolWindow.getContentManager().addContent(content);
     }
 

@@ -6,19 +6,15 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.util.xmlb.XmlSerializerUtil;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * Persists the current participant ID across IDE restarts.
+ * Application-level persistent service holding the current participant ID.
  *
- * Used to namespace session IDs in MetricCollector and gate the
- * tool window behind the participant setup screen.
+ * <p>Used by the study workflow to namespace session data per participant
+ * and to gate the tool window behind a participant-setup screen.
  */
-@State(
-    name = "ParticipantSession",
-    storages = @Storage("therapeutic-dev-participant.xml")
-)
-public final class ParticipantSession implements PersistentStateComponent<ParticipantSession> {
+@State(name = "ParticipantSession", storages = @Storage("therapeutic-dev-participant.xml"))
+public class ParticipantSession implements PersistentStateComponent<ParticipantSession> {
 
     public String participantId = "";
 
@@ -31,7 +27,7 @@ public final class ParticipantSession implements PersistentStateComponent<Partic
     }
 
     public void setParticipantId(String id) {
-        this.participantId = id != null ? id.trim() : "";
+        this.participantId = id == null ? "" : id.trim();
     }
 
     public void clearParticipant() {
@@ -43,7 +39,7 @@ public final class ParticipantSession implements PersistentStateComponent<Partic
     }
 
     @Override
-    public @Nullable ParticipantSession getState() {
+    public ParticipantSession getState() {
         return this;
     }
 

@@ -167,9 +167,11 @@ public class FlowMetrics {
 
         public Builder timestamp(Instant t)          { this.timestamp = t; return this; }
         public Builder sessionId(String s)           { this.sessionId = s; return this; }
-        public Builder sessionDuration(long ms)      { this.sessionDurationMs = ms; return this; }
+        public Builder sessionDuration(long ms)        { this.sessionDurationMs = ms; return this; }
+        public Builder sessionDurationMs(long ms)      { this.sessionDurationMs = ms; return this; }
 
         public Builder keystrokesPerMinute(double kpm){ this.keystrokesPerMin = (int) kpm; return this; }
+        public Builder keystrokesPerMin(int kpm)     { this.keystrokesPerMin = kpm; return this; }
         public Builder avgKeyIntervalMs(double i)    { this.avgKeyIntervalMs = i; return this; }
         public Builder backspaceCount(int c)         { this.backspaceCount = c; return this; }
         public Builder keyboardIdleMs(long ms)       { this.keyboardIdleMs = ms; return this; }

@@ -29,15 +29,15 @@ public class FlowDetector {
     private int kpmHigh    = 150;
 
     // Focus thresholds
-    private int fileChangeTolerance = 5;
-    private int focusLossTolerance  = 3;
+    private int fileChangeTolerance = 2;
+    private int focusLossTolerance  = 0;
 
     // Error thresholds
-    private int syntaxErrTolerance      = 3;
-    private int compilationErrTolerance = 2;
+    private int syntaxErrTolerance      = 1;
+    private int compilationErrTolerance = 0;
 
     // Build thresholds
-    private int buildFailTolerance = 2;
+    private int buildFailTolerance = 1;
 
     // State classification thresholds
     private double deepFlowThreshold       = 0.80;
@@ -115,8 +115,11 @@ public class FlowDetector {
         double corrPenalty = Math.min(bsRatio * 2.0, 0.3);
         double corrScore   = Math.max(0.0, 1.0 - corrPenalty);
 
+        // Scale correction and burst by typing activity — no keystrokes = no credit
+        double activityFactor = Math.min(kpmScore / 0.3, 1.0);
+
         // Weighted combination
-        return (kpmScore * 0.50) + (corrScore * 0.30) + (burst * 0.20);
+        return (kpmScore * 0.50) + (corrScore * activityFactor * 0.30) + (burst * 0.20);
     }
 
     // ==================== ERROR SCORE ====================
@@ -139,7 +142,7 @@ public class FlowDetector {
             int netAccumulation = introduced - resolved;
             if (netAccumulation > 0) {
                 // Errors accumulating — penalise
-                score -= Math.min(netAccumulation * 0.12, 0.5);
+                score -= Math.min(netAccumulation * 0.24, 0.80);
             } else if (netAccumulation < 0 || (introduced > 0 && resolved >= introduced)) {
                 // Resolving more than introducing (or tight cycle) — bonus
                 score = Math.min(1.0, score + 0.10);
@@ -147,10 +150,10 @@ public class FlowDetector {
         } else {
             // Fallback: raw count penalties
             if (syntaxErrs > syntaxErrTolerance) {
-                score -= Math.min((syntaxErrs - syntaxErrTolerance) * 0.10, 0.40);
+                score -= Math.min((syntaxErrs - syntaxErrTolerance) * 0.10, 0.60);
             }
             if (compErrs > compilationErrTolerance) {
-                score -= Math.min((compErrs - compilationErrTolerance) * 0.15, 0.50);
+                score -= Math.min((compErrs - compilationErrTolerance) * 0.15, 0.70);
             }
         }
 
@@ -172,14 +175,14 @@ public class FlowDetector {
         double score = 1.0;
 
         if (fileChanges > fileChangeTolerance) {
-            score -= Math.min((fileChanges - fileChangeTolerance) * 0.10, 0.30);
+            score -= Math.min((fileChanges - fileChangeTolerance) * 0.19, 0.40);
         }
         if (focusLosses > focusLossTolerance) {
-            score -= Math.min((focusLosses - focusLossTolerance) * 0.10, 0.30);
+            score -= Math.min((focusLosses - focusLossTolerance) * 0.19, 0.40);
         }
         // Sustained dwell bonus (2+ min in same file)
         if (timeInFile > 120_000L) {
-            score = Math.min(1.0, score + 0.15);
+            score = Math.min(1.0, score + 0.05);
         }
 
         return Math.max(0.0, score);
@@ -198,27 +201,32 @@ public class FlowDetector {
             // Prefer per-interval success rate
             double rate = m.getBuildSuccessRate();
             if (rate < 1.0) {
-                score -= (1.0 - rate) * 0.5; // up to -0.5 for all-fail interval
+                score -= (1.0 - rate) * 0.6; // up to -0.6 for all-fail interval
             }
             // Moderate frequency bonus (1–3 builds/interval = good cadence)
             int builds = m.getBuildsInWindow();
             if (builds >= 1 && builds <= 3) score = Math.min(1.0, score + 0.05);
         } else {
-            // No builds this interval — use last known result + streak
-            if (!m.isLastBuildSuccess()) score -= 0.30;
+            // No builds this interval — staleness penalty scales with time
+            long msSinceBuild = m.getTimeSinceLastBuildMs();
+            if (msSinceBuild > 300_000L) {
+                double staleness = Math.min((msSinceBuild - 300_000L) / 1_200_000.0, 0.30);
+                score -= staleness;
+            }
+            if (!m.isLastBuildSuccess()) score -= 0.35;
             int streak = m.getConsecutiveFailedBuilds();
             if (streak > buildFailTolerance) {
-                score -= Math.min((streak - buildFailTolerance) * 0.15, 0.40);
+                score -= Math.min((streak - buildFailTolerance) * 0.18, 0.55);
             }
         }
 
         // Long time since any build
         long sinceLastBuild = m.getTimeSinceLastBuildMs();
-        if (sinceLastBuild > 1_800_000L) score -= 0.10; // 30+ min, no build
+        if (sinceLastBuild > 1_800_000L) score -= 0.15; // 30+ min, no build
 
         // Recent success bonus
         if (m.isLastBuildSuccess() && sinceLastBuild < 300_000L) {
-            score = Math.min(1.0, score + 0.10);
+            score = Math.min(1.0, score + 0.05);
         }
 
         return Math.max(0.0, score);
