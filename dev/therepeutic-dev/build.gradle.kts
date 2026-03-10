@@ -21,6 +21,10 @@ dependencies {
         bundledPlugin("com.intellij.java")
     }
     implementation("org.xerial:sqlite-jdbc:3.44.1.0")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
 }
 
 intellijPlatform {
@@ -43,6 +47,10 @@ tasks {
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "21"
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     buildSearchableOptions {

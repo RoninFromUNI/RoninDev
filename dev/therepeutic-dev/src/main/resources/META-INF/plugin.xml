@@ -87,6 +87,10 @@
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.services.EsmProbeService"/>
 
+        <!-- Participant session persistence (study workflow) -->
+        <applicationService
+                serviceImplementation="com.ronin.therapeuticdev.services.ParticipantSession"/>
+
     </extensions>
 
     <!-- Project-level listeners (registered via listener topics) -->
