@@ -89,7 +89,9 @@ public final class MetricCollector implements Disposable {
     // ==================== CONSTRUCTOR ====================
 
     public MetricCollector() {
-        this.sessionId  = UUID.randomUUID().toString();
+        String uuid = UUID.randomUUID().toString();
+        String pid = ParticipantSession.getInstance().getParticipantId();
+        this.sessionId = pid.isBlank() ? uuid : pid + "_" + uuid;
         this.sessionStart = Instant.now();
         long now = System.currentTimeMillis();
         this.currentFileStartMs.set(now);
