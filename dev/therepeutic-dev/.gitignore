@@ -2,4 +2,5 @@
 build/
 .idea/
 *.iml
+.intellijPlatform/.claude/
 .intellijPlatform/
