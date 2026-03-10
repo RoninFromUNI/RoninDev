@@ -66,7 +66,7 @@ public final class EsmProbeService {
         });
     }
 
-    /** Resets the probe timer (e.g., after a participant takes a break). */
+    /** Resets the probe timer (e.g. after a participant takes a break). */
     public void resetTimer() {
         lastProbeTime = Instant.now();
     }

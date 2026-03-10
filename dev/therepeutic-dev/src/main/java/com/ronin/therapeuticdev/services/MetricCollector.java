@@ -43,7 +43,7 @@ public final class MetricCollector implements Disposable {
     private final Deque<Long> recentIntervals = new ConcurrentLinkedDeque<>();
     private static final int  INTERVAL_WINDOW = 50;
 
-    // ==================== ERRORS ====================
+    // error counts + last errors + error resolution
     private final AtomicInteger syntaxErrorCount       = new AtomicInteger(0);
     private final AtomicInteger compilationErrorCount  = new AtomicInteger(0);
     private final AtomicLong    lastErrorTimeMs        = new AtomicLong(0);
@@ -51,20 +51,18 @@ public final class MetricCollector implements Disposable {
     private final AtomicInteger errorsIntroduced       = new AtomicInteger(0);
     /** Errors that were cleared (count went down) since last reset. */
     private final AtomicInteger errorsResolved         = new AtomicInteger(0);
-
-    // ==================== FOCUS ====================
+    // focus change + focus loss + file start + file path counts and starts
+    // all measured in ms and atomic values (initally all at 0)
     private final AtomicInteger fileChangeCount  = new AtomicInteger(0);
     private final AtomicInteger focusLostCount   = new AtomicInteger(0);
     private final AtomicLong    currentFileStartMs = new AtomicLong(0);
     private volatile String     currentFilePath   = "";
-
     /** Completed file visits: [startMs, endMs], parallel with completedVisitPaths. */
     private final Deque<long[]> completedVisits     = new ConcurrentLinkedDeque<>();
     private final Deque<String> completedVisitPaths = new ConcurrentLinkedDeque<>();
     private final Deque<Long>   fileSwitchTimestamps = new ConcurrentLinkedDeque<>();
     private static final long   ACTIVITY_WINDOW_MS  = 30 * 60_000L;
-
-    // ==================== IDE FOCUS % ====================
+    // total idel + window start in ms , ide actie start and ide focus
     /** When the current interval started (for ideFocusPct denominator). */
     private final AtomicLong windowStartMs     = new AtomicLong(0);
     /** Accumulated ms IntelliJ was active in this interval. */
@@ -72,8 +70,7 @@ public final class MetricCollector implements Disposable {
     /** When IntelliJ most recently became the active window. */
     private final AtomicLong ideActiveStartMs  = new AtomicLong(0);
     private final AtomicBoolean ideIsFocused   = new AtomicBoolean(true);
-
-    // ==================== BUILD ====================
+    // last build success + failed builds + last buildd time
     private final AtomicBoolean lastBuildSuccess       = new AtomicBoolean(true);
     private final AtomicInteger consecutiveFailedBuilds = new AtomicInteger(0);
     private final AtomicLong    lastBuildTimeMs        = new AtomicLong(0);
