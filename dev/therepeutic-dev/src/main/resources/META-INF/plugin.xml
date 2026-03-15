@@ -60,7 +60,7 @@
         <toolWindow
                 id="Therapeutic Dev"
                 anchor="right"
-                icon="/icons/flow-icon.svg"
+                icon="/icons/therapeuticDev.svg"
                 factoryClass="com.ronin.therapeuticdev.ui.FlowStateToolWindowFactory"/>
 
         <!-- Status Bar Widget -->
