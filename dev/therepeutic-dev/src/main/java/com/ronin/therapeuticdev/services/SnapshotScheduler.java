@@ -4,7 +4,7 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.util.concurrency.AppExecutorUtil;
+import com.intellij.util.Alarm;
 import com.ronin.therapeuticdev.detection.FlowDetector;
 import com.ronin.therapeuticdev.detection.FlowDetectionResult;
 import com.ronin.therapeuticdev.listeners.ErrorHighlightListener;
@@ -13,110 +13,160 @@ import com.ronin.therapeuticdev.settings.TherapeuticDevSettings;
 import com.ronin.therapeuticdev.storage.MetricRepository;
 import com.ronin.therapeuticdev.services.EsmProbeService;
 
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
 /**
- * Periodic scheduler that triggers flow detection at regular intervals.
- * 
- * Every SNAPSHOT_INTERVAL_SECONDS:
- * 1. Collects current error count from code analysis
- * 2. Creates a FlowMetrics snapshot from MetricCollector
- * 3. Runs FlowDetector.detect() on the snapshot
- * 4. Notifies registered listeners of the result
- * 5. Optionally persists the snapshot for user study analysis
- * 
- * Uses IntelliJ's AppExecutorUtil for proper thread handling.
+ * WHAT I AM TRYING TO ESTABLISH:
  *
- * @see <a href="https://plugins.jetbrains.com/docs/intellij/general-threading-rules.html">
- *      IntelliJ Platform SDK - Threading Rules</a>
+ * a periodic scheduler aimed to trigger flow detection at regular intervals
+ *
+ * presented through every LIVE_REFRESH_MS:
+ *   - creates a FlowMetrics snapshot from MetricCollector
+ *   - runs FlowDetector.detect() on the snapshot
+ *   - notifies registered listeners of the result
+ *
+ * then in every PERSIST_INTERVAL_MS:
+ *   - collects current error count from code analysis
+ *   - persists snapshot for user study analysis
+ *   - resets interval counters
+ *   - checks ESM probe delivery
+ *
+ * uses Alarm with POOLED_THREAD to schedule recurring work without blocking the EDT.
+ * Alarm integrates with the IDE's Disposable lifecycle so tasks are automatically
+ * cancelled on disposal — no manual executor shutdown required.
+ *
+ * this avoids the IncorrectOperationException thrown by SchedulingWrapper.scheduleAtFixedRate
+ * which the platform prohibits because fixed-rate executors interfere with IDE hibernation.
+ *
+ * see: IntelliJ Platform SDK — Threading Rules
  */
 @Service(Service.Level.APP)
 public final class SnapshotScheduler implements Disposable {
 
     private static final Logger LOG = Logger.getInstance(SnapshotScheduler.class);
-    
-    /** How often the UI receives fresh flow detection results (seconds) */
-    private static final int LIVE_REFRESH_SECONDS = 2;
 
-    /** How often interval counters reset and error scan runs (seconds) */
-    private static final int PERSIST_INTERVAL_SECONDS = 60;
+    /** how often the UI gets fresh flow detection results (milliseconds) */
+    private static final int LIVE_REFRESH_MS = 2_000;
 
-    private final ScheduledExecutorService executor;
-    private ScheduledFuture<?> liveTask;
-    private ScheduledFuture<?> persistTask;
-    private final FlowDetector detector;
-    
-    /** Listeners notified on each detection result */
-    private final List<FlowDetectionListener> listeners = new CopyOnWriteArrayList<>();
-    
-    /** Most recent detection result for UI access */
-    private volatile FlowDetectionResult lastResult;
+    /** how often interval counters reset and error scan runs (milliseconds) */
+    private static final int PERSIST_INTERVAL_MS = 60_000;
 
     /**
-     * Listener interface for flow detection events.
+     * live refresh loop alarm.
+     *
+     * POOLED_THREAD executes the callback on a background thread, keeping the EDT free.
+     * passing 'this' as the parent Disposable means the alarm is auto-cancelled
+     * when this service is disposed — i need to write about this in the dissertation.
+     */
+    private final Alarm liveAlarm;
+
+    /**
+     * persist cycle alarm — separate instance so the two loops run independently.
+     * if a slow persist cycle happens (e.g. large error scan), it wont delay
+     * the next live refresh because theyre on different Alarm instances.
+     */
+    private final Alarm persistAlarm;
+
+    private final FlowDetector detector;
+
+    /** listeners notified on each detection result */
+    private final List<FlowDetectionListener> listeners = new CopyOnWriteArrayList<>();
+
+    /** most recent detection result for UI access */
+    private volatile FlowDetectionResult lastResult;
+
+    /** guard flag so start() is idempotent — calling it twice wont double-schedule */
+    private volatile boolean running;
+
+    /**
+     * listener interface for flow detection events.
+     * anything that wants to react to a new detection result implements this.
      */
     public interface FlowDetectionListener {
         void onFlowDetected(FlowDetectionResult result, FlowMetrics metrics);
     }
 
+    // ── constructor ──────────────────────────────────────────────────
+
+    /**
+     * both alarms use POOLED_THREAD so callbacks run off-EDT on the platform thread pool.
+     * passing 'this' ties their lifecycle to this service — when the service disposes,
+     * the alarms cancel themselves automatically.
+     */
     public SnapshotScheduler() {
-        this.executor = AppExecutorUtil.getAppScheduledExecutorService();
+        this.liveAlarm = new Alarm(Alarm.ThreadToUse.POOLED_THREAD, this);
+        this.persistAlarm = new Alarm(Alarm.ThreadToUse.POOLED_THREAD, this);
         this.detector = new FlowDetector();
     }
 
+    // ── start / stop ─────────────────────────────────────────────────
+
     /**
-     * Starts the periodic scheduler.
-     * Two cycles run independently:
-     *  - Live refresh (every 5s): snapshot → detect → notify UI listeners
-     *  - Persist cycle (every 60s): error scan + interval counter reset
+     * kicks off both periodic loops.
+     *
+     * Alarm.addRequest() is a one-shot timer, not a repeating one —
+     * so the pattern is: callback does its work, then re-enqueues itself at the end.
+     * this gives a fixed-DELAY schedule (interval measured from task completion, not start).
+     * actually better for us — if a persist cycle takes ages, the next one doesnt stack up.
      */
     public void start() {
-        if (liveTask != null && !liveTask.isCancelled()) {
+        if (running) {
             LOG.warn("SnapshotScheduler already running");
             return;
         }
+        running = true;
 
-        LOG.info("Starting SnapshotScheduler — live refresh every " + LIVE_REFRESH_SECONDS
-                + "s, persist cycle every " + PERSIST_INTERVAL_SECONDS + "s");
+        LOG.info("Starting SnapshotScheduler — live refresh every " + LIVE_REFRESH_MS
+                + "ms, persist cycle every " + PERSIST_INTERVAL_MS + "ms");
 
-        liveTask = executor.scheduleAtFixedRate(
-                this::performLiveRefresh,
-                LIVE_REFRESH_SECONDS,   // short initial delay so UI populates quickly
-                LIVE_REFRESH_SECONDS,
-                TimeUnit.SECONDS
-        );
-
-        persistTask = executor.scheduleAtFixedRate(
-                this::performPersistCycle,
-                PERSIST_INTERVAL_SECONDS,
-                PERSIST_INTERVAL_SECONDS,
-                TimeUnit.SECONDS
-        );
+        scheduleLiveRefresh();
+        schedulePersistCycle();
     }
 
     /**
-     * Stops the periodic scheduler.
+     * stops both periodic loops.
+     * cancels any pending requests without interrupting in-flight callbacks.
      */
     public void stop() {
-        if (liveTask != null) {
-            liveTask.cancel(false);
-            liveTask = null;
-        }
-        if (persistTask != null) {
-            persistTask.cancel(false);
-            persistTask = null;
-        }
+        running = false;
+        liveAlarm.cancelAllRequests();
+        persistAlarm.cancelAllRequests();
         LOG.info("SnapshotScheduler stopped");
     }
 
+    // ── scheduling plumbing ──────────────────────────────────────────
+
     /**
-     * Lightweight cycle: snapshot current metrics, run detection, push to UI.
-     * Does NOT reset interval counters or run the expensive error scan.
-     * Runs every {@value LIVE_REFRESH_SECONDS} seconds.
+     * the re-enqueue pattern: do work → schedule next run → repeat.
+     * the running guard makes sure we dont re-enqueue after stop() was called.
+     */
+    private void scheduleLiveRefresh() {
+        if (!running) return;
+        liveAlarm.addRequest(() -> {
+            performLiveRefresh();
+            scheduleLiveRefresh();   // re-enqueue for next cycle
+        }, LIVE_REFRESH_MS);
+    }
+
+    /**
+     * same re-enqueue pattern for the heavier persist cycle.
+     * separate alarm instance means this doesnt compete with live refresh timing.
+     */
+    private void schedulePersistCycle() {
+        if (!running) return;
+        persistAlarm.addRequest(() -> {
+            performPersistCycle();
+            schedulePersistCycle();   // re-enqueue for next cycle
+        }, PERSIST_INTERVAL_MS);
+    }
+
+    // ── core logic (the actual work — unchanged from before) ─────────
+
+    /**
+     * lightweight cycle: snapshot current metrics, run detection, push to UI.
+     * does NOT reset interval counters or run the expensive error scan.
+     * this is the fast one that runs every 2 seconds.
      */
     private void performLiveRefresh() {
         try {
@@ -135,6 +185,8 @@ public final class SnapshotScheduler implements Disposable {
             LOG.debug("Live refresh: score=" + String.format("%.1f", result.getFlowTally() * 100)
                     + ", state=" + result.getState());
 
+            // notify all registered listeners — wrapped in try/catch each
+            // so one broken listener doesnt take down the whole loop
             for (FlowDetectionListener listener : listeners) {
                 try {
                     listener.onFlowDetected(result, metrics);
@@ -148,17 +200,15 @@ public final class SnapshotScheduler implements Disposable {
     }
 
     /**
-     * Heavy cycle: scans open files for syntax errors, persists a snapshot, then
-     * resets interval counters so the next interval starts clean.
+     * heavy cycle: the expensive one that runs every 60 seconds.
      *
-     * Order matters:
-     *   1. Refresh error count (expensive scan — once per minute is enough)
-     *   2. Snapshot + detect with fresh error data
-     *   3. Persist (if enabled) — must happen BEFORE counter reset so interval
+     * order matters here:
+     *   1. refresh error count (scans all open files — expensive, hence once per minute)
+     *   2. snapshot + detect with fresh error data
+     *   3. persist if enabled — MUST happen BEFORE counter reset so interval
      *      values (file switches, focus losses, compile errors) are captured
-     *   4. Reset interval counters
-     *
-     * Runs every {@value PERSIST_INTERVAL_SECONDS} seconds.
+     *   4. reset interval counters so next minute starts clean
+     *   5. check if an ESM probe should fire
      */
     private void performPersistCycle() {
         try {
@@ -167,15 +217,15 @@ public final class SnapshotScheduler implements Disposable {
 
             if (collector == null) return;
 
-            // 1. Refresh syntax error count (scans all open files)
+            // 1. refresh syntax error count (scans all open files)
             ErrorHighlightListener.recordCurrentErrors();
 
-            // 2. Snapshot + detect with the freshly updated error count
+            // 2. snapshot + detect with the freshly updated error count
             FlowMetrics metrics = collector.snapshot();
             FlowDetectionResult result = detector.detect(metrics);
             lastResult = result;
 
-            // 3. Persist if enabled in settings
+            // 3. persist if enabled in settings
             TherapeuticDevSettings settings = ApplicationManager.getApplication()
                     .getService(TherapeuticDevSettings.class);
             if (settings != null && settings.persistSnapshots) {
@@ -188,10 +238,10 @@ public final class SnapshotScheduler implements Disposable {
                 }
             }
 
-            // 4. Reset interval-based counters (file switches, focus losses, compile errors)
+            // 4. reset interval-based counters (file switches, focus losses, compile errors)
             collector.resetIntervalCounters();
 
-            // 5. Check whether an ESM probe should be delivered
+            // 5. check whether an ESM probe should be delivered
             EsmProbeService esm = ApplicationManager.getApplication()
                     .getService(EsmProbeService.class);
             if (esm != null) esm.checkAndDeliver(result);
@@ -202,41 +252,31 @@ public final class SnapshotScheduler implements Disposable {
         }
     }
 
+    // ── public API ───────────────────────────────────────────────────
+
     /**
-     * Triggers an immediate live refresh outside the regular schedule.
+     * triggers an immediate live refresh outside the regular schedule.
+     * useful for when the UI needs a result right now (e.g. tool window just opened).
      */
     public FlowDetectionResult triggerImmediateSnapshot() {
         performLiveRefresh();
         return lastResult;
     }
 
-    /**
-     * Registers a listener to be notified on flow detection.
-     */
     public void addListener(FlowDetectionListener listener) {
         listeners.add(listener);
     }
 
-    /**
-     * Removes a listener.
-     */
     public void removeListener(FlowDetectionListener listener) {
         listeners.remove(listener);
     }
 
-    /**
-     * Returns the most recent detection result.
-     * May be null if no detection has run yet.
-     */
     public FlowDetectionResult getLastResult() {
         return lastResult;
     }
 
-    /**
-     * Checks if the scheduler is currently running.
-     */
     public boolean isRunning() {
-        return liveTask != null && !liveTask.isCancelled();
+        return running;
     }
 
     @Override
