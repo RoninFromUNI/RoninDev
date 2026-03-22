@@ -9,7 +9,7 @@
 -->
 <idea-plugin>
     <id>com.ronin.therapeuticdev</id>
-    <n>Therapeutic Dev</n>
+    <name>Therapeutic Dev</name>
     <version>0.1.0-alpha</version>
     <vendor email="ronin@example.com" url="https://github.com/ronin">Ronin</vendor>
 

@@ -6,12 +6,14 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="therapeutic-dev-study-task" />
         <module name="dvsa-slot-checker" />
         <module name="portfolio-creative-webapp" />
         <module name="creative-portfolio" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="therapeutic-dev-study-task" target="21" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

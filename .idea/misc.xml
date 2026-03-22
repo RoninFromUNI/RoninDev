@@ -10,7 +10,6 @@
         <option value="$PROJECT_DIR$/dev/dvsa-slot-checker/pom.xml" />
         <option value="$PROJECT_DIR$/dev/creative-portfolio/pom.xml" />
         <option value="$PROJECT_DIR$/dev/portfolio-creative-webapp/pom.xml" />
-        <option value="$PROJECT_DIR$/dev/therapeutic-dev-study-task/pom.xml" />
       </list>
     </option>
   </component>
@@ -466,7 +465,7 @@
       </profile-state>
     </entry>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" project-jdk-name="24" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_23" project-jdk-name="24" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>
