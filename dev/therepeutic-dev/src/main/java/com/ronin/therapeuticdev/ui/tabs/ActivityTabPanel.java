@@ -19,7 +19,22 @@ import java.util.Comparator;
 import java.util.Map.Entry;
 
 /**
- * Activity tab — live stats bar, file heatmap, vertical switch timeline.
+ * activity tab — live stats, file heatmap, and context switch timeline.
+ *
+ * three sections stacked vertically:
+ *   1. live stat chips — kpm, idle time, current file (update every 1 second)
+ *   2. file heatmap — proportional bars showing time spent in each file over
+ *      the last 30 minutes, colour-coded by intensity
+ *   3. switch timeline — vertical list of recent file visits with timestamps
+ *      and duration, most recent at top
+ *
+ * the warning banner appears when context switches exceed the configured threshold
+ * (default 7 per interval). this is a visual cue that the focus metric is taking
+ * a hit, which might explain why the composite score is dropping.
+ *
+ * updateActivity() is called from FlowStatePanel's onFlowDetected (every 2s for full
+ * refresh). updateLiveChips() is called from FlowStatePanel's 1-second timer for the
+ * stat chips only — keeping kpm and idle time visibly ticking without a full redraw.
  */
 public class ActivityTabPanel extends JBPanel<ActivityTabPanel> {
 

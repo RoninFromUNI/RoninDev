@@ -9,9 +9,20 @@ import java.awt.*;
 import java.io.IOException;
 
 /**
- * Compact media control bar that sends OS-level media key events via PowerShell.
- * Java's Robot only fires JVM-level key events; to actually control YouTube Music
- * or Spotify in Chrome we must invoke the Windows keybd_event API directly.
+ * compact media control bar — prev/play-pause/next/mute buttons.
+ *
+ * this is a quality-of-life feature i added because i personally hate alt-tabbing
+ * to youtube music just to skip a track. the buttons send os-level media key events
+ * via powershell's keybd_event interop, which means they control whatever media app
+ * is currently playing (spotify, youtube music in chrome, etc.) without leaving the ide.
+ *
+ * java's Robot class only fires jvm-level key events which don't reach other apps,
+ * so i have to shell out to powershell with the Add-Type / DllImport pattern to
+ * call user32.dll's keybd_event directly. this only works on windows — the
+ * IOException catch silently fails on mac/linux.
+ *
+ * the buttons live in the session footer of FlowStatePanel, right-aligned opposite
+ * the session duration clock.
  */
 public class MediaControlPanel extends JBPanel<MediaControlPanel> {
 

@@ -20,17 +20,15 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 
 /**
- * Factory for creating the Therapeutic Dev status bar widget.
+ * factory for the status bar widget at the bottom of the ide.
  *
- * <p>Widget displays:
- * <pre>
- * ┌─────────────────┐
- * │ ● 72 FLOW ████ │
- * └─────────────────┘
- * </pre>
+ * the widget shows a coloured dot (green/amber/red) + the numeric score + state name.
+ * clicking it opens the full tool window. this gives developers a persistent, glanceable
+ * flow indicator without needing the sidebar panel open.
  *
- * <p>Color-coded dot indicates state (green/amber/red).
- * Clicking opens the Tool Window.
+ * i switched from MultipleTextValuesPresentation to TextPresentation for SDK compatibility
+ * after hitting a NoSuchMethodError on older platform builds. TextPresentation is simpler
+ * anyway — just getText() and getTooltipText().
  */
 public class FlowStatusBarWidgetFactory implements StatusBarWidgetFactory {
 

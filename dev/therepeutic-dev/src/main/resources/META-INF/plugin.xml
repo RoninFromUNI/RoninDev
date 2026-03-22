@@ -1,7 +1,15 @@
-<!-- Plugin Configuration for Therapeutic Dev -->
+<!--
+  plugin.xml — the integration manifest for therapeutic dev.
+  
+  every component in the plugin is registered here. intellij reads this at
+  startup to know which extension points to wire up, which services to make
+  available, and which listeners to subscribe to message bus topics.
+  
+  if something isn't registered here, it doesn't exist as far as the ide is concerned.
+-->
 <idea-plugin>
     <id>com.ronin.therapeuticdev</id>
-    <name>Therapeutic Dev</name>
+    <n>Therapeutic Dev</n>
     <version>0.1.0-alpha</version>
     <vendor email="ronin@example.com" url="https://github.com/ronin">Ronin</vendor>
 
@@ -28,10 +36,11 @@
     </ul>
     ]]></change-notes>
 
-    <!-- Minimum IDE version -->
+    <!-- ide version compatibility — sinceBuild/untilBuild must be set explicitly
+         or the plugin won't install. i learned this the hard way when build 253
+         rejected the plugin because untilBuild wasn't declared. -->
     <idea-version since-build="233" until-build="243.*"/>
 
-    <!-- Plugin dependencies -->
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
     <depends>com.intellij.modules.java</depends>
@@ -40,79 +49,94 @@
 
         <!-- ==================== STARTUP ==================== -->
 
-        <!-- Kicks off the SnapshotScheduler when a project opens -->
+        <!-- TherapeuticDevStartup kicks off SnapshotScheduler when a project opens.
+             without this, no detection happens until something else triggers the service. -->
         <postStartupActivity
                 implementation="com.ronin.therapeuticdev.TherapeuticDevStartup"/>
 
-        <!-- ==================== LISTENERS ==================== -->
+        <!-- ==================== LISTENERS (extension point based) ==================== -->
 
-        <!-- Typing activity (keystrokes) -->
+        <!-- intercepts every printable character typed in any editor.
+             feeds the typing metric category (30% weight). -->
         <typedHandler
                 implementation="com.ronin.therapeuticdev.listeners.TypingActivityListener"/>
 
-        <!-- Backspace handling -->
+        <!-- intercepts backspace/delete — separate from typedHandler because intellij
+             routes deletion through the action system, not the typed handler pipeline.
+             this was a platform constraint that took a while to figure out. -->
         <backspaceHandlerDelegate
                 implementation="com.ronin.therapeuticdev.listeners.BackspaceHandler"/>
 
         <!-- ==================== UI COMPONENTS ==================== -->
 
-        <!-- Tool Window (main panel) -->
+        <!-- the main tool window — shows ParticipantSetupPanel first, then FlowStatePanel
+             once a participant ID is entered. anchored to the right sidebar. -->
         <toolWindow
                 id="Therapeutic Dev"
                 anchor="right"
                 icon="/icons/therapeuticDev.svg"
                 factoryClass="com.ronin.therapeuticdev.ui.FlowStateToolWindowFactory"/>
 
-        <!-- Status Bar Widget -->
+        <!-- compact status bar widget at the bottom of the ide.
+             shows coloured dot + score + state name. clicking opens the tool window. -->
         <statusBarWidgetFactory
                 id="TherapeuticDevWidget"
                 implementation="com.ronin.therapeuticdev.ui.FlowStatusBarWidgetFactory"/>
 
-        <!-- Settings Panel -->
+        <!-- settings panel under Settings > Tools > Therapeutic Dev.
+             includes the csv export button for study data extraction. -->
         <applicationConfigurable
                 parentId="tools"
                 instance="com.ronin.therapeuticdev.settings.TherapeuticDevConfigurable"
                 id="com.ronin.therapeuticdev.settings"
                 displayName="Therapeutic Dev"/>
 
-        <!-- Persistent Settings State (ONLY if TherapeuticDevSettings does NOT have @Service annotation) -->
+        <!-- ==================== APPLICATION SERVICES ==================== -->
+
+        <!-- persistent settings — TherapeuticDevSettings has @Service but still needs
+             this registration because it also implements PersistentStateComponent. -->
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.settings.TherapeuticDevSettings"/>
 
-        <!-- Metrics persistence (SQLite) -->
+        <!-- sqlite persistence layer for snapshots and esm responses -->
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.storage.MetricRepository"/>
 
-        <!-- ESM probe delivery service -->
+        <!-- esm probe delivery — timed self-report dialogs for the study -->
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.services.EsmProbeService"/>
 
-        <!-- Participant session persistence (study workflow) -->
+        <!-- participant session — persists the participant ID across ide restarts -->
         <applicationService
                 serviceImplementation="com.ronin.therapeuticdev.services.ParticipantSession"/>
 
     </extensions>
 
-    <!-- Project-level listeners (registered via listener topics) -->
+    <!-- ==================== PROJECT-LEVEL LISTENERS ==================== -->
+    <!-- these subscribe to project message bus topics — one instance per open project -->
     <projectListeners>
-        <!-- File editor changes (context switching) -->
+        <!-- file tab switches — feeds the focus metric category (20% weight) -->
         <listener
                 class="com.ronin.therapeuticdev.listeners.FileActivityListener"
                 topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
     </projectListeners>
 
-    <!-- Application-level listeners -->
+    <!-- ==================== APPLICATION-LEVEL LISTENERS ==================== -->
+    <!-- these subscribe to application message bus topics — one instance total -->
     <applicationListeners>
-        <!-- AI suggestion heuristic (large document insertions) -->
+        <!-- ai suggestion heuristic — counts large document insertions (40+ chars)
+             as probable copilot/jetbrains ai acceptances -->
         <listener
                 class="com.ronin.therapeuticdev.listeners.AiSuggestionListener"
                 topic="com.intellij.openapi.editor.event.EditorFactoryListener"/>
-        <!-- IDE focus tracking -->
+
+        <!-- ide focus tracking — detects alt-tab away from and back to intellij.
+             feeds both focus (20%) and context (10%) scoring categories. -->
         <listener
                 class="com.ronin.therapeuticdev.listeners.FocusListener"
                 topic="com.intellij.openapi.application.ApplicationActivationListener"/>
 
-        <!-- Build/compilation results -->
+        <!-- build/compilation results — feeds the builds metric category (15% weight) -->
         <listener
                 class="com.ronin.therapeuticdev.listeners.BuildListener"
                 topic="com.intellij.openapi.compiler.CompilationStatusListener"/>

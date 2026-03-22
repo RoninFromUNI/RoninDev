@@ -16,7 +16,7 @@ import java.util.Map;
  * Detects likely AI suggestion acceptances via a document-change heuristic.
  *
  * A single DocumentEvent that adds ≥ 40 net characters is unlikely to be normal
- * typed input and is counted as a probable AI acceptance (Copilot, JetBrains AI,
+ * typed input and is counted as an  AI acceptance (Copilot, JetBrains AI,
  * or paste). The metric is labelled heuristic in both the UI and exported data;
  * the ESM probe asks participants to self-report actual AI tool usage per interval.
  *

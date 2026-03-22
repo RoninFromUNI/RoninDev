@@ -79,14 +79,14 @@ public final class MetricCollector implements Disposable {
     /** Successful builds within the current interval. */
     private final AtomicInteger successBuildsInWindow  = new AtomicInteger(0);
 
-    // ==================== AI HEURISTIC ====================
+    // _______________ AI HEURISTIC _______________
     /**
      * Count of large single-event document insertions (>= 40 chars net gain),
      * used as a proxy for AI suggestion acceptance. Tracked by AiSuggestionListener.
      */
     private final AtomicInteger aiSuggestionsAccepted = new AtomicInteger(0);
 
-    // ==================== CONSTRUCTOR ====================
+    // _______________ CONSTRUCTOR _______________
 
     public MetricCollector() {
         String uuid = UUID.randomUUID().toString();
@@ -99,7 +99,7 @@ public final class MetricCollector implements Disposable {
         this.ideActiveStartMs.set(now);
     }
 
-    // ==================== TYPING RECORDING ====================
+    // _______________ TYPING RECORDING _______________
 
     /** Called by TypingActivityListener on every character typed. */
     public void recKeystroke(long timestampMs) {
@@ -135,7 +135,7 @@ public final class MetricCollector implements Disposable {
         lastKeystrokeTimeMs.set(timestampMs); // counts as activity
     }
 
-    // ==================== ERROR RECORDING ====================
+    // _______________ ERROR RECORDING _______________
 
     /** Called by ErrorHighlightListener with the current syntax error count. */
     public void recSyntaxErrors(int newCount) {
@@ -154,7 +154,7 @@ public final class MetricCollector implements Disposable {
         if (count > 0) lastErrorTimeMs.set(System.currentTimeMillis());
     }
 
-    // ==================== FOCUS RECORDING ====================
+    // _______________ FOCUS RECORDING _______________
 
     /** Called by FileActivityListener on file tab switch. */
     public void recFileChange(long timestampMs, String newFilePath) {
@@ -204,7 +204,7 @@ public final class MetricCollector implements Disposable {
         }
     }
 
-    // ==================== BUILD RECORDING ====================
+    // _______________BUILD RECORDING _______________
 
     /** Called by BuildListener on every build completion. */
     public void recBuildResult(long timestampMs, boolean success, int errors, int warnings) {
@@ -221,7 +221,7 @@ public final class MetricCollector implements Disposable {
         }
     }
 
-    // ==================== AI HEURISTIC ====================
+    //_______________AI HEURISTIC_______________
 
     /**
      * Called by AiSuggestionListener when a large single-event text insertion
@@ -231,7 +231,7 @@ public final class MetricCollector implements Disposable {
         aiSuggestionsAccepted.incrementAndGet();
     }
 
-    // ==================== CALCULATIONS ====================
+    // _______________CALCULATIONS _______________
 
     /** Real-time KPM over the 2-minute sliding window. */
     public double getKeystrokesPerMinute() {
@@ -312,7 +312,7 @@ public final class MetricCollector implements Disposable {
         return total == 0 ? 1.0 : (double) successBuildsInWindow.get() / total;
     }
 
-    // ==================== SNAPSHOT ====================
+    // _______________ SNAPSHOT ________________
 
     /**
      * Creates an immutable FlowMetrics snapshot from current state.
@@ -375,7 +375,7 @@ public final class MetricCollector implements Disposable {
         }
     }
 
-    // ==================== ACTIVITY DATA FOR UI ====================
+    // _______________ ACTIVITY DATA FOR UI _______________
 
     public List<Long> getFileSwitchTimestamps() {
         return new ArrayList<>(fileSwitchTimestamps);
@@ -429,7 +429,7 @@ public final class MetricCollector implements Disposable {
         return result;
     }
 
-    // ==================== GETTERS FOR UI ====================
+    // _______________ GETTERS FOR UI _______________
 
     public String  getSessionId()             { return sessionId; }
     public Instant getSessionStart()          { return sessionStart; }

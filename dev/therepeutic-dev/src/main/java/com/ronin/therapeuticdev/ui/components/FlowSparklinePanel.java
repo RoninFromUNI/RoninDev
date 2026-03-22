@@ -16,14 +16,19 @@ import java.util.Deque;
 import java.util.List;
 
 /**
- * Rolling sparkline chart of composite flow scores over the last N detection cycles.
+ * rolling sparkline chart showing composite flow scores over the last 60 detection cycles.
  *
- * Each call to {@link #addResult(FlowDetectionResult)} appends the latest scored
- * result and repaints. The line is coloured by the FlowState at each point, giving
- * a visual history of state transitions. Hovering over the chart displays a tooltip
- * with the five category sub-scores at that point in time.
+ * each call to addResult() appends the latest score and triggers a repaint. the line
+ * segments are coloured by FlowState at each point, giving a visual history of state
+ * transitions — you can literally see the moment flow was disrupted and when it recovered.
  *
- * Rendered with antialiasing via Graphics2D; inherits IntelliJ theme colours.
+ * the hover tooltip shows all five category sub-scores at the hovered data point,
+ * which is useful for diagnosing why a score dropped (was it errors? focus loss? idle?).
+ *
+ * guide lines at 0.65 (flow threshold) and 0.35 (procrastinating threshold) give
+ * visual reference for where the classification boundaries sit.
+ *
+ * rendered with Graphics2D antialiasing; inherits intellij theme colours via JBColor.
  */
 public class FlowSparklinePanel extends JPanel {
 

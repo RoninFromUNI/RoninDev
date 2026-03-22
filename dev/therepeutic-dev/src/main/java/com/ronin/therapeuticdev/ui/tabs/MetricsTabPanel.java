@@ -9,18 +9,19 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Metrics tab panel displaying the five flow metric categories.
- * 
- * <p>Layout:
- * <pre>
- * ┌─────────────────────────────────┐
- * │ ⌨ Typing     30%  ████████░░ 72│
- * │ ⚠ Errors     25%  ██████░░░░ 58│
- * │ 📁 Focus     20%  █████████░ 85│
- * │ 🔨 Builds    15%  ███████░░░ 67│
- * │ ⚡ Activity  10%  ████████░░ 71│
- * └─────────────────────────────────┘
- * </pre>
+ * metrics tab — shows all five scoring categories as labelled progress bars.
+ *
+ * each bar corresponds to one of the five weighted dimensions in FlowDetector:
+ *   ⌨ Typing     30%
+ *   ⚠ Errors     25%
+ *   📁 Focus     20%
+ *   🔨 Builds    15%
+ *   ⚡ Activity  10%
+ *
+ * updateMetrics() receives the five sub-scores (0.0–1.0) from FlowStatePanel's
+ * onFlowDetected callback and forwards them to the individual MetricBar components.
+ * this gives the developer a breakdown of which dimensions are contributing to or
+ * dragging down their composite score.
  */
 public class MetricsTabPanel extends JBPanel<MetricsTabPanel> {
 

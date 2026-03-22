@@ -7,57 +7,58 @@ import com.ronin.therapeuticdev.services.MetricCollector;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Tracks when the IDE gains or loses focus (user switches to another app).
- * 
- * <p>Focus loss events indicate:
- * - Alt-tabbing to browser/docs → possibly researching (acceptable)
- * - Frequent focus switching → likely distracted
- * - Extended focus loss → break or interruption
- * 
- * <p>Feeds the Focus metric category (20% weight) in FlowDetector.
+ * tracks when the ide gains or loses os-level focus (user alt-tabs away).
  *
- * @see <a href="https://plugins.jetbrains.com/docs/intellij/plugin-listeners.html">
- *      IntelliJ Platform SDK - Plugin Listeners</a>
+ * this feeds two metrics:
+ *   - focusLossCount for the focus score (20% weight) — how many times
+ *     the developer left the ide this interval
+ *   - ideFocusPct for the context score (10% weight) — what proportion
+ *     of the interval was spent in the ide vs other applications
+ *
+ * frequent alt-tabbing strongly correlates with disrupted flow in gloria mark's
+ * interruption research. but i don't penalise a single long absence as harshly
+ * as frequent short ones because a single long absence might be a legitimate
+ * research break, while rapid switching suggests distraction.
  */
 public class FocusListener implements ApplicationActivationListener {
 
     private long lastDeactivationTime = 0;
 
     /**
-     * Called when IntelliJ gains focus (user switches back to IDE).
+     * ide gained focus — developer switched back.
+     * i calculate how long they were away and record the return event.
      */
     @Override
     public void applicationActivated(@NotNull IdeFrame ideFrame) {
         MetricCollector collector = ApplicationManager.getApplication()
                 .getService(MetricCollector.class);
-        
+
         if (collector == null) {
             return;
         }
-        
+
         long now = System.currentTimeMillis();
-        
-        // Calculate how long we were away
+
         if (lastDeactivationTime > 0) {
             long awayDurationMs = now - lastDeactivationTime;
             collector.recFocusRegained(now, awayDurationMs);
         }
-        
+
         lastDeactivationTime = 0;
     }
 
     /**
-     * Called when IntelliJ loses focus (user switches to another app).
+     * ide lost focus — developer switched to another application.
      */
     @Override
     public void applicationDeactivated(@NotNull IdeFrame ideFrame) {
         MetricCollector collector = ApplicationManager.getApplication()
                 .getService(MetricCollector.class);
-        
+
         if (collector == null) {
             return;
         }
-        
+
         lastDeactivationTime = System.currentTimeMillis();
         collector.recFocusLost(lastDeactivationTime);
     }

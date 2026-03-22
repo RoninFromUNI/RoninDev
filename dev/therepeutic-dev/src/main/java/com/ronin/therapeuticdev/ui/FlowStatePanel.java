@@ -23,22 +23,21 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Main panel for the Therapeutic Dev tool window.
+ * the main dashboard panel — this is what the developer sees in the tool window.
  *
- * <p>Layout structure (from wireframe v3):
- * <pre>
- * ┌─────────────────────────────┐
- * │      Hero Score Card        │  ← Flow score, trend, state badge
- * ├─────────────────────────────┤
- * │  Metrics │ Activity │ Graph │  ← Tab navigation
- * ├─────────────────────────────┤
- * │                             │
- * │      Tab Content Area       │  ← Switches based on selected tab
- * │                             │
- * ├─────────────────────────────┤
- * │      Session Footer         │  ← Duration + sparkline
- * └─────────────────────────────┘
- * </pre>
+ * layout from top to bottom:
+ *   hero score card — big number + state badge + trend arrow
+ *   tabbed content — Metrics, Activity, History (sparkline), Graph & Project
+ *   session footer — running clock + media controls
+ *
+ * i register as a FlowDetectionListener on SnapshotScheduler so every 2 seconds
+ * the UI refreshes with fresh detection data. all updates go through onFlowDetected()
+ * which dispatches to the EDT via SwingUtilities.invokeLater — the scheduler callback
+ * runs on a background thread so direct swing access would be a threading violation.
+ *
+ * the settings gear tab (index 4) is a hacky but effective pattern — clicking it
+ * opens the settings dialog and immediately switches back to tab 0. no actual
+ * panel exists behind that tab.
  */
 public class FlowStatePanel implements SnapshotScheduler.FlowDetectionListener {
 

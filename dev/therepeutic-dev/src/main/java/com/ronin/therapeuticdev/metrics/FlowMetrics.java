@@ -3,9 +3,28 @@ package com.ronin.therapeuticdev.metrics;
 import java.time.Instant;
 
 /**
- * Immutable snapshot of flow-related metrics at a specific point in time.
+ * immutable snapshot of all metric values at a single point in time.
  *
- * Uses Builder pattern for clean construction across 30+ fields.
+ * every 2 seconds (live refresh) and every 60 seconds (persist cycle),
+ * MetricCollector.snapshot() constructs one of these from the current atomic
+ * field values. once built, nothing can modify it — no setters exist anywhere.
+ * this guarantees that FlowDetector, the UI, and the persistence layer all
+ * see the same consistent data without race conditions.
+ *
+ * i use the Builder pattern because there are 27+ fields. a constructor with
+ * 27 positional parameters would be unreadable and error-prone (which double
+ * is the error score vs the focus score?). the builder gives named setter chains
+ * like .keystrokesPerMin(80).backspaceCount(5) which are self-documenting at
+ * the call site in MetricCollector.snapshot().
+ *
+ * the fields map directly to the five scoring categories in FlowDetector:
+ *   typing:  keystrokesPerMin, avgKeyIntervalMs, backspaceCount, keyboardIdleMs, burstConsistency
+ *   errors:  syntaxErrorCount, compilationErrors, timeSinceLastErrorMs, errorsIntroduced, errorsResolved
+ *   focus:   fileChangesLast5Min, timeInCurrentFileMs, focusLossCount
+ *   builds:  lastBuildSuccess, consecutiveFailedBuilds, timeSinceLastBuildMs, buildsInWindow, buildSuccessRate
+ *   context: ideFocusPct, aiSuggestionsAccepted
+ *
+ * flowTally and stressLevel are included for persistence convenience — not used as detection inputs.
  */
 public class FlowMetrics {
 
@@ -19,17 +38,21 @@ public class FlowMetrics {
     private final double avgKeyIntervalMs;
     private final int backspaceCount;
     private final long keyboardIdleMs;
-    /** Coefficient of variation of inter-keystroke intervals, normalised to [0,1].
-     *  1.0 = perfectly rhythmic, 0.0 = completely erratic. */
+
+    // coefficient of variation of inter-keystroke intervals, normalised to [0,1].
+    // 1.0 = perfectly rhythmic typing (flow indicator), 0.0 = completely erratic.
+    // computed from a sliding window of 50 recent intervals in MetricCollector.
     private final double burstConsistency;
 
     // ==================== ERROR TRACKING ====================
     private final int syntaxErrorCount;
     private final int compilationErrors;
     private final long timeSinceLastErrorMs;
-    /** New errors that appeared since the last interval reset. */
+
+    // these two track the *trajectory* of errors within the current interval,
+    // not just the absolute count. FlowDetector's error scoring prefers this
+    // because it captures whether errors are accumulating or being resolved.
     private final int errorsIntroduced;
-    /** Errors that were cleared since the last interval reset. */
     private final int errorsResolved;
 
     // ==================== CONTEXT SWITCHING ====================
@@ -41,18 +64,24 @@ public class FlowMetrics {
     private final boolean lastBuildSuccess;
     private final int consecutiveFailedBuilds;
     private final long timeSinceLastBuildMs;
-    /** Number of builds triggered in this interval. */
+
+    // per-interval build stats — FlowDetector uses these when available,
+    // falling back to the cumulative fields above when no builds happened this interval
     private final int buildsInWindow;
-    /** Proportion of builds in this interval that succeeded (0.0–1.0). */
     private final double buildSuccessRate;
 
     // ==================== CONTEXTUAL / AI ====================
-    /** Proportion of this interval that IntelliJ was the active application (0.0–1.0). */
+
+    // proportion of this interval that intellij was the active window (0.0–1.0).
+    // computed from FocusListener's activation/deactivation timestamps.
     private final double ideFocusPct;
-    /** Inline AI completions that appeared (heuristic: large single insertions). */
+
+    // heuristic count of ai suggestion acceptances (large single insertions >= 40 chars).
+    // tracked by AiSuggestionListener, labelled as heuristic in the ui and export.
     private final int aiSuggestionsAccepted;
 
     // ==================== CALCULATED SCORES ====================
+    // included for persistence convenience — not used as detection inputs
     private final double flowTally;
     private final double stressLevel;
     private final String notes;
@@ -93,6 +122,7 @@ public class FlowMetrics {
     }
 
     // ==================== GETTERS ====================
+    // no setters — immutability enforced by design
 
     public Instant getTimestamp()        { return timestamp; }
     public String  getSessionId()        { return sessionId; }
@@ -140,11 +170,11 @@ public class FlowMetrics {
         private double avgKeyIntervalMs = 0;
         private int    backspaceCount   = 0;
         private long   keyboardIdleMs   = 0;
-        private double burstConsistency = 1.0; // default: perfectly rhythmic
+        private double burstConsistency = 1.0; // default: perfectly rhythmic (no data yet)
 
         private int  syntaxErrorCount    = 0;
         private int  compilationErrors   = 0;
-        private long timeSinceLastErrorMs = Long.MAX_VALUE;
+        private long timeSinceLastErrorMs = Long.MAX_VALUE; // no errors yet = infinite time since last
         private int  errorsIntroduced    = 0;
         private int  errorsResolved      = 0;
 
@@ -152,49 +182,53 @@ public class FlowMetrics {
         private long timeInCurrentFileMs = 0;
         private int  focusLossCount      = 0;
 
-        private boolean lastBuildSuccess       = true;
+        private boolean lastBuildSuccess       = true;  // optimistic default
         private int     consecutiveFailedBuilds = 0;
-        private long    timeSinceLastBuildMs    = Long.MAX_VALUE;
+        private long    timeSinceLastBuildMs    = Long.MAX_VALUE; // no builds yet
         private int     buildsInWindow          = 0;
-        private double  buildSuccessRate        = 1.0;
+        private double  buildSuccessRate        = 1.0;  // optimistic default
 
-        private double ideFocusPct          = 1.0;
+        private double ideFocusPct          = 1.0;  // assume focused until proven otherwise
         private int    aiSuggestionsAccepted = 0;
 
         private double flowTally   = 0;
         private double stressLevel = 0;
         private String notes       = "";
 
-        public Builder timestamp(Instant t)          { this.timestamp = t; return this; }
-        public Builder sessionId(String s)           { this.sessionId = s; return this; }
+        // two session duration setters because MetricCollector calls sessionDuration()
+        // while some test code calls sessionDurationMs() — both do the same thing
+        public Builder timestamp(Instant t)            { this.timestamp = t; return this; }
+        public Builder sessionId(String s)             { this.sessionId = s; return this; }
         public Builder sessionDuration(long ms)        { this.sessionDurationMs = ms; return this; }
         public Builder sessionDurationMs(long ms)      { this.sessionDurationMs = ms; return this; }
 
-        public Builder keystrokesPerMinute(double kpm){ this.keystrokesPerMin = (int) kpm; return this; }
-        public Builder keystrokesPerMin(int kpm)     { this.keystrokesPerMin = kpm; return this; }
-        public Builder avgKeyIntervalMs(double i)    { this.avgKeyIntervalMs = i; return this; }
-        public Builder backspaceCount(int c)         { this.backspaceCount = c; return this; }
-        public Builder keyboardIdleMs(long ms)       { this.keyboardIdleMs = ms; return this; }
-        public Builder burstConsistency(double c)    { this.burstConsistency = c; return this; }
+        // two kpm setters: one takes double (from MetricCollector.getKeystrokesPerMinute()),
+        // one takes int (from test code). the double version truncates to int.
+        public Builder keystrokesPerMinute(double kpm) { this.keystrokesPerMin = (int) kpm; return this; }
+        public Builder keystrokesPerMin(int kpm)       { this.keystrokesPerMin = kpm; return this; }
+        public Builder avgKeyIntervalMs(double i)      { this.avgKeyIntervalMs = i; return this; }
+        public Builder backspaceCount(int c)           { this.backspaceCount = c; return this; }
+        public Builder keyboardIdleMs(long ms)         { this.keyboardIdleMs = ms; return this; }
+        public Builder burstConsistency(double c)      { this.burstConsistency = c; return this; }
 
-        public Builder syntaxErrorCount(int c)       { this.syntaxErrorCount = c; return this; }
-        public Builder compilationErrors(int c)      { this.compilationErrors = c; return this; }
-        public Builder timeSinceLastErrorMs(long ms) { this.timeSinceLastErrorMs = ms; return this; }
-        public Builder errorsIntroduced(int c)       { this.errorsIntroduced = c; return this; }
-        public Builder errorsResolved(int c)         { this.errorsResolved = c; return this; }
+        public Builder syntaxErrorCount(int c)         { this.syntaxErrorCount = c; return this; }
+        public Builder compilationErrors(int c)        { this.compilationErrors = c; return this; }
+        public Builder timeSinceLastErrorMs(long ms)   { this.timeSinceLastErrorMs = ms; return this; }
+        public Builder errorsIntroduced(int c)         { this.errorsIntroduced = c; return this; }
+        public Builder errorsResolved(int c)           { this.errorsResolved = c; return this; }
 
-        public Builder fileChangesLast5Min(int c)    { this.fileChangesLast5Min = c; return this; }
-        public Builder timeInCurrentFileMs(long ms)  { this.timeInCurrentFileMs = ms; return this; }
-        public Builder focusLossCount(int c)         { this.focusLossCount = c; return this; }
+        public Builder fileChangesLast5Min(int c)      { this.fileChangesLast5Min = c; return this; }
+        public Builder timeInCurrentFileMs(long ms)    { this.timeInCurrentFileMs = ms; return this; }
+        public Builder focusLossCount(int c)           { this.focusLossCount = c; return this; }
 
-        public Builder lastBuildSuccess(boolean s)       { this.lastBuildSuccess = s; return this; }
-        public Builder consecutiveFailedBuilds(int c)    { this.consecutiveFailedBuilds = c; return this; }
-        public Builder timeSinceLastBuildMs(long ms)     { this.timeSinceLastBuildMs = ms; return this; }
-        public Builder buildsInWindow(int c)             { this.buildsInWindow = c; return this; }
-        public Builder buildSuccessRate(double r)        { this.buildSuccessRate = r; return this; }
+        public Builder lastBuildSuccess(boolean s)         { this.lastBuildSuccess = s; return this; }
+        public Builder consecutiveFailedBuilds(int c)      { this.consecutiveFailedBuilds = c; return this; }
+        public Builder timeSinceLastBuildMs(long ms)       { this.timeSinceLastBuildMs = ms; return this; }
+        public Builder buildsInWindow(int c)               { this.buildsInWindow = c; return this; }
+        public Builder buildSuccessRate(double r)          { this.buildSuccessRate = r; return this; }
 
-        public Builder ideFocusPct(double p)             { this.ideFocusPct = p; return this; }
-        public Builder aiSuggestionsAccepted(int c)      { this.aiSuggestionsAccepted = c; return this; }
+        public Builder ideFocusPct(double p)               { this.ideFocusPct = p; return this; }
+        public Builder aiSuggestionsAccepted(int c)        { this.aiSuggestionsAccepted = c; return this; }
 
         public Builder flowTally(double t)    { this.flowTally = t; return this; }
         public Builder stressLevel(double s)  { this.stressLevel = s; return this; }

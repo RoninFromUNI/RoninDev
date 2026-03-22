@@ -8,17 +8,15 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Combined tab — architecture graph (top) + project file-type
- * composition donut chart (bottom), split vertically.
+ * combined tab — architecture graph on top, project file-type composition donut below.
  *
- * <p>Layout:
- * <pre>
- * ┌───────────────────────────────────┐
- * │     Graph   (class / package)     │  ~55 %
- * ├───────────────────────────────────┤  ← drag divider
- * │     Project Composition donut     │  ~45 %
- * └───────────────────────────────────┘
- * </pre>
+ * split vertically with a draggable divider (55/45 default split). the graph shows
+ * classes grouped by package with dependency arrows; the donut shows the file type
+ * breakdown similar to github's language bar.
+ *
+ * i combined these into one tab because they're both project-level views that don't
+ * need to be visible simultaneously with the per-interval metrics. keeping them in
+ * separate tabs would have cluttered the tab bar.
  */
 public class GraphAndProjectTab extends JBPanel<GraphAndProjectTab> {
 

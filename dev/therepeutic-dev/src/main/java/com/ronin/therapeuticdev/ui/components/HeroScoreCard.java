@@ -10,17 +10,19 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Hero card displaying the current flow score prominently.
+ * the big score display at the top of the tool window.
  *
- * <p>Layout:
- * <pre>
- * ┌─────────────────────────────────┐
- * │                                 │
- * │           72        ▲ +5       │  ← Score + Trend
- * │         ● FLOW                  │  ← State badge
- * │                                 │
- * └─────────────────────────────────┘
- * </pre>
+ * shows three things: the numeric composite score (0–100), a trend arrow
+ * indicating whether the score is improving or declining since last cycle,
+ * and a coloured state badge with the FlowState name.
+ *
+ * all seven FlowState values map to distinct colours so the developer can
+ * glance at the badge colour without reading the text. green family for
+ * flow states, amber for neutral, orange/red for disrupted/procrastinating,
+ * slate for disengaged.
+ *
+ * the rounded background is painted manually in paintComponent because
+ * JBPanel's default rectangular background doesn't support border radius.
  */
 public class HeroScoreCard extends JBPanel<HeroScoreCard> {
 

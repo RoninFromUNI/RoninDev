@@ -9,13 +9,17 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Reusable metric bar component showing:
- * Icon | Name | Weight | Progress Bar | Score
- * 
- * <p>Example:
- * <pre>
- * ⌨ Typing    30%  ████████░░  72
- * </pre>
+ * reusable progress bar component for a single metric category.
+ *
+ * layout: Icon | Name | Weight | Progress Bar | Score
+ * example:  ⌨  Typing   30%   ████████░░   72
+ *
+ * one of these exists for each of the five scoring categories in MetricsTabPanel.
+ * the weight label (30%, 25%, etc.) reminds the developer how much this category
+ * contributes to the composite score.
+ *
+ * the progress bar uses a custom RoundedProgressBarUI because the default
+ * BasicProgressBarUI renders rectangular fills which look harsh in the dark theme.
  */
 public class MetricBar extends JBPanel<MetricBar> {
 

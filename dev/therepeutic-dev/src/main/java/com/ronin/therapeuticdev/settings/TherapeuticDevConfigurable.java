@@ -15,41 +15,45 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Settings panel for Therapeutic Dev plugin.
- * Accessible via Settings > Tools > Therapeutic Dev
+ * the settings panel — accessible via Settings > Tools > Therapeutic Dev.
  *
- * @see <a href="https://plugins.jetbrains.com/docs/intellij/settings-guide.html">
- *      IntelliJ Platform SDK - Settings Guide</a>
+ * i use intellij's Configurable interface which gives me the standard apply/reset/
+ * isModified lifecycle for free. the panel is built with FormBuilder which handles
+ * label alignment and spacing automatically so it looks native.
+ *
+ * the export button at the bottom is the study data extraction point — it pulls
+ * all snapshots from MetricRepository.exportToCsv() and writes to a user-chosen
+ * file path. this is how i get participant data out of the plugin for analysis.
  */
 public class TherapeuticDevConfigurable implements Configurable {
 
     private JPanel mainPanel;
 
-    // Detection
+    // detection controls
     private JSlider sensitivitySlider;
     private JBLabel sensitivityLabel;
 
-    // Breaks
+    // break controls
     private JComboBox<String> breakIntervalCombo;
     private JBCheckBox autoBreakCheckbox;
 
-    // Notifications
+    // notification controls
     private JBCheckBox modalNotificationCheckbox;
     private JBCheckBox balloonNotificationCheckbox;
     private JBCheckBox statusBarCheckbox;
     private JBCheckBox soundCheckbox;
 
-    // Activity View
+    // activity view controls
     private JBCheckBox enableHeatmapCheckbox;
     private JBCheckBox trackSwitchesCheckbox;
     private JSpinner switchThresholdSpinner;
 
-    // Graph View
+    // graph view controls
     private JBCheckBox enableGraphCheckbox;
     private JBCheckBox autoRefreshGraphCheckbox;
     private JBCheckBox showDependenciesCheckbox;
 
-    // Data
+    // data controls
     private JBCheckBox collectMetricsCheckbox;
     private JButton exportButton;
 
@@ -63,7 +67,9 @@ public class TherapeuticDevConfigurable implements Configurable {
     public @Nullable JComponent createComponent() {
         TherapeuticDevSettings settings = TherapeuticDevSettings.getInstance();
 
-        // ==================== DETECTION SECTION ====================
+        // ==================== DETECTION ====================
+        // slider range 50–80 maps to flowThreshold 0.50–0.80
+        // higher = stricter, meaning the developer needs a higher composite score to hit FLOW
         sensitivitySlider = new JSlider(50, 80, (int) (settings.flowThreshold * 100));
         sensitivitySlider.setMajorTickSpacing(10);
         sensitivitySlider.setMinorTickSpacing(5);
@@ -78,20 +84,20 @@ public class TherapeuticDevConfigurable implements Configurable {
         sensitivityPanel.add(sensitivitySlider, BorderLayout.CENTER);
         sensitivityPanel.add(sensitivityLabel, BorderLayout.EAST);
 
-        // ==================== BREAKS SECTION ====================
+        // ==================== BREAKS ====================
         breakIntervalCombo = new JComboBox<>(new String[]{"30 minutes", "60 minutes", "90 minutes"});
         breakIntervalCombo.setSelectedIndex(settings.breakIntervalMinutes == 30 ? 0 :
                 settings.breakIntervalMinutes == 60 ? 1 : 2);
 
         autoBreakCheckbox = new JBCheckBox("Auto-suggest breaks", settings.autoBreakSuggestions);
 
-        // ==================== NOTIFICATIONS SECTION ====================
+        // ==================== NOTIFICATIONS ====================
         modalNotificationCheckbox = new JBCheckBox("Modal dialog", settings.useModalNotifications);
         balloonNotificationCheckbox = new JBCheckBox("Balloon notification", settings.useBalloonNotifications);
         statusBarCheckbox = new JBCheckBox("Status bar widget", settings.showStatusBarWidget);
         soundCheckbox = new JBCheckBox("Play sound", settings.playSoundOnBreak);
 
-        // ==================== ACTIVITY VIEW SECTION ====================
+        // ==================== ACTIVITY VIEW ====================
         enableHeatmapCheckbox = new JBCheckBox("Enable activity heatmap", settings.enableActivityHeatmap);
         trackSwitchesCheckbox = new JBCheckBox("Track context switches", settings.trackContextSwitches);
 
@@ -99,31 +105,29 @@ public class TherapeuticDevConfigurable implements Configurable {
                 settings.contextSwitchWarningThreshold, 1, 20, 1);
         switchThresholdSpinner = new JSpinner(switchModel);
 
-        // ==================== GRAPH VIEW SECTION ====================
+        // ==================== GRAPH VIEW ====================
         enableGraphCheckbox = new JBCheckBox("Enable graph view", settings.enableGraphView);
         autoRefreshGraphCheckbox = new JBCheckBox("Auto-refresh on changes", settings.autoRefreshGraph);
         showDependenciesCheckbox = new JBCheckBox("Show dependencies", settings.showDependencies);
 
-        // ==================== DATA SECTION ====================
+        // ==================== DATA ====================
         collectMetricsCheckbox = new JBCheckBox("Collect metrics", settings.collectMetrics);
         exportButton = new JButton("Export CSV");
         exportButton.addActionListener(e -> exportData());
 
-        // ==================== BUILD PANEL ====================
+        // ==================== ASSEMBLE ====================
+        // FormBuilder handles label alignment and consistent spacing across all sections
         mainPanel = FormBuilder.createFormBuilder()
-                // Detection
                 .addSeparator()
                 .addComponent(new JBLabel("Detection"))
                 .addLabeledComponent("Sensitivity threshold:", sensitivityPanel)
                 .addComponentToRightColumn(new JBLabel("Higher = stricter flow detection"), 1)
 
-                // Breaks
                 .addSeparator()
                 .addComponent(new JBLabel("Breaks"))
                 .addLabeledComponent("Break interval:", breakIntervalCombo)
                 .addComponent(autoBreakCheckbox)
 
-                // Notifications
                 .addSeparator()
                 .addComponent(new JBLabel("Notifications"))
                 .addComponent(modalNotificationCheckbox)
@@ -131,21 +135,18 @@ public class TherapeuticDevConfigurable implements Configurable {
                 .addComponent(statusBarCheckbox)
                 .addComponent(soundCheckbox)
 
-                // Activity View
                 .addSeparator()
                 .addComponent(new JBLabel("Activity View"))
                 .addComponent(enableHeatmapCheckbox)
                 .addComponent(trackSwitchesCheckbox)
                 .addLabeledComponent("Switch warning threshold:", switchThresholdSpinner)
 
-                // Graph View
                 .addSeparator()
                 .addComponent(new JBLabel("Graph View"))
                 .addComponent(enableGraphCheckbox)
                 .addComponent(autoRefreshGraphCheckbox)
                 .addComponent(showDependenciesCheckbox)
 
-                // Data
                 .addSeparator()
                 .addComponent(new JBLabel("Data"))
                 .addComponent(collectMetricsCheckbox)
@@ -159,6 +160,10 @@ public class TherapeuticDevConfigurable implements Configurable {
         return mainPanel;
     }
 
+    /**
+     * intellij calls this to decide whether the "Apply" button should be enabled.
+     * i compare every control's current value against the persisted settings.
+     */
     @Override
     public boolean isModified() {
         TherapeuticDevSettings settings = TherapeuticDevSettings.getInstance();
@@ -179,6 +184,10 @@ public class TherapeuticDevConfigurable implements Configurable {
                 || collectMetricsCheckbox.isSelected() != settings.collectMetrics;
     }
 
+    /**
+     * writes all control values to the persistent settings object.
+     * intellij handles the actual xml serialisation after this returns.
+     */
     @Override
     public void apply() throws ConfigurationException {
         TherapeuticDevSettings settings = TherapeuticDevSettings.getInstance();
@@ -203,6 +212,10 @@ public class TherapeuticDevConfigurable implements Configurable {
         settings.collectMetrics = collectMetricsCheckbox.isSelected();
     }
 
+    /**
+     * restores all controls to the currently persisted values.
+     * called when the user clicks "Reset" or re-opens the settings panel.
+     */
     @Override
     public void reset() {
         TherapeuticDevSettings settings = TherapeuticDevSettings.getInstance();
@@ -239,6 +252,12 @@ public class TherapeuticDevConfigurable implements Configurable {
         breakIntervalCombo.setSelectedIndex(minutes == 30 ? 0 : minutes == 90 ? 2 : 1);
     }
 
+    /**
+     * the csv export handler — this is how study data gets out of the plugin.
+     * opens a file chooser, pulls all snapshots from MetricRepository, writes to disk.
+     * the csv includes every column from the snapshots table: timestamps, all five
+     * sub-scores, composite tally, classified state, and session id.
+     */
     private void exportData() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Export Flow Metrics");
@@ -271,4 +290,3 @@ public class TherapeuticDevConfigurable implements Configurable {
         }
     }
 }
-

@@ -7,65 +7,56 @@ import com.ronin.therapeuticdev.services.MetricCollector;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Tracks build/compilation results.
- * 
- * <p>Build success/failure patterns indicate developer state:
- * - Consecutive successful builds → likely in flow, code is working
- * - Consecutive failures → likely struggling, potential stress
- * - Quick recovery after failure → good debugging flow
- * 
- * <p>Feeds the Builds metric category (15% weight) in FlowDetector.
+ * tracks build/compilation results for the builds metric category (15% weight).
  *
- * @see <a href="https://plugins.jetbrains.com/docs/intellij/compiler.html">
- *      IntelliJ Platform SDK - Compiler</a>
+ * build patterns are a strong behavioural signal:
+ *   - consecutive successes suggest the developer is in a productive rhythm
+ *   - consecutive failures suggest they're stuck or debugging something hard
+ *   - quick recovery after failure suggests good debugging flow
+ *
+ * i also forward compilation error counts to MetricCollector so the error
+ * scoring category (25% weight) has access to compile-time error data in
+ * addition to the real-time syntax errors from ErrorHighlightListener.
  */
 public class BuildListener implements CompilationStatusListener {
 
     /**
-     * Called when a compilation/build process completes.
-     *
-     * @param aborted true if the compilation was cancelled
-     * @param errors  number of compilation errors
-     * @param warnings number of compilation warnings
-     * @param compileContext context containing detailed build information
+     * fires when a compilation/build process finishes.
+     * aborted builds are ignored — they don't represent a meaningful signal.
      */
     @Override
-    public void compilationFinished(boolean aborted, int errors, int warnings, 
+    public void compilationFinished(boolean aborted, int errors, int warnings,
                                     @NotNull CompileContext compileContext) {
-        
+
         if (aborted) {
-            // Build was cancelled, don't count it
             return;
         }
-        
+
         MetricCollector collector = ApplicationManager.getApplication()
                 .getService(MetricCollector.class);
-        
+
         if (collector == null) {
             return;
         }
-        
+
         long now = System.currentTimeMillis();
         boolean success = (errors == 0);
-        
-        // Record the build result
+
         collector.recBuildResult(now, success, errors, warnings);
-        
-        // Also record compilation errors for the error metric category
+
+        // forward compilation errors to the error metric category as well
         if (errors > 0) {
             collector.recCompilationErrors(errors);
         }
     }
 
     /**
-     * Called when compilation starts.
-     * Could be used to track build duration in the future.
+     * auto-make (incremental background compilation) finished.
+     * i treat it identically to a full build — the behavioural signal is the same.
      */
     @Override
-    public void automakeCompilationFinished(int errors, int warnings, 
+    public void automakeCompilationFinished(int errors, int warnings,
                                             @NotNull CompileContext compileContext) {
-        // Auto-make (incremental background compilation) finished
-        // Treat the same as regular compilation
         compilationFinished(false, errors, warnings, compileContext);
     }
 }

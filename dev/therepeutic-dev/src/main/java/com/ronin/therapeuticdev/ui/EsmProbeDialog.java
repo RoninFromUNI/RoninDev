@@ -17,20 +17,20 @@ import java.awt.*;
 import java.time.Instant;
 
 /**
- * Non-modal ESM probe dialog — 7-item Flow State Scale adapted for software development.
+ * the esm self-report dialog — a 7-item flow state scale adapted from jackson & marsh (1996).
  *
- * Each item is rated 1–5 (Strongly Disagree → Strongly Agree).
- * The dialog is non-blocking (MODALITY_NOT_MODAL) so it does not interrupt the workflow.
- * Responses are saved to the {@code esm_responses} table in MetricRepository.
+ * each item is rated 1–5 (strongly disagree to strongly agree). the items are adapted
+ * from the original flow state scale to fit software development context — "the challenge
+ * of this task matches my programming skill level" rather than the generic version.
  *
- * FSS items (Jackson & Marsh, 1996) adapted for IDE context:
- *  1. "The challenge of this task matches my programming skill level"
- *  2. "Coding is happening automatically — I am not thinking about how I am doing it"
- *  3. "I know clearly what I want to accomplish next"
- *  4. "I can tell whether I am coding well or not"
- *  5. "I am completely focused on what I am coding"
- *  6. "I feel in control of what I am coding"
- *  7. "I am coding for the enjoyment of it, not just to complete a task"
+ * non-modal so it doesn't block the developer. they can dismiss it and keep coding.
+ * responses are saved to the esm_responses table in MetricRepository with a foreign
+ * key linking to the nearest snapshot — that link is how i pair subjective self-report
+ * data with the algorithm's classification at the same moment.
+ *
+ * i also ask about ai tool usage (checkbox + text field for which tool) because the
+ * research question explicitly addresses ai-augmented development. the heuristic in
+ * AiSuggestionListener gives me one signal; the self-report gives me ground truth.
  */
 public class EsmProbeDialog extends DialogWrapper {
 

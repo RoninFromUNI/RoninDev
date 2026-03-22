@@ -14,26 +14,18 @@ import java.awt.*;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Modal dialog for break suggestions.
- * 
- * <p>Triggered when:
- * - Flow duration exceeds threshold (e.g., 90 min)
- * - Flow score drops significantly (exit flow state)
- * - High context switching detected (stress indicator)
- * 
- * <p>Layout:
- * <pre>
- * ┌─────────────────────────────────┐
- * │      Time for a break?         │
- * │  ┌───────────────────────────┐ │
- * │  │ You've been in flow for   │ │
- * │  │        1h 42m             │ │
- * │  └───────────────────────────┘ │
- * │  Suggested: exceeded 90 min    │
- * │                                │
- * │ [Take Break] [Snooze] [Dismiss]│
- * └─────────────────────────────────┘
- * </pre>
+ * the break suggestion modal — appears when BreakManager decides it's time.
+ *
+ * non-modal (setModal false) so the developer isn't forced to respond before
+ * they can interact with the ide. three actions: Take Break resets flow tracking,
+ * Snooze 15min delays the next notification, Dismiss just logs and moves on.
+ *
+ * the stats card shows how long they've been in flow, which gives context for
+ * why the break is being suggested. "you've been in flow for 1h 42m" is more
+ * persuasive than a generic "take a break" message.
+ *
+ * i use DialogWrapper rather than a raw JDialog because it integrates with
+ * intellij's window management, theming, and action system automatically.
  */
 public class BreakNotificationDialog extends DialogWrapper {
 

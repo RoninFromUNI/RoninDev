@@ -10,16 +10,18 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Persistent settings for Therapeutic Dev plugin.
- * 
- * <p>Stores user preferences in IDE configuration:
- * - Detection sensitivity thresholds
- * - Break interval preferences
- * - Notification style options
- * - Feature toggles
+ * all user-configurable settings for the plugin, persisted to therapeutic-dev.xml.
  *
- * @see <a href="https://plugins.jetbrains.com/docs/intellij/persisting-state-of-components.html">
- *      IntelliJ Platform SDK - Persisting State</a>
+ * i made every field public because PersistentStateComponent serialises via
+ * XmlSerializerUtil which needs direct field access. using private fields with
+ * getters/setters would require explicit xml annotations for no real benefit
+ * in a single-developer plugin.
+ *
+ * the weight fields (weightTyping, weightErrors, etc.) mirror the defaults in
+ * FlowDetector. they're exposed here so the settings panel could eventually let
+ * users adjust them, but right now FlowDetector uses its own internal defaults.
+ * connecting these to FlowDetector's setWeights() is a post-study task — i don't
+ * want participants accidentally changing algorithm weights during the study.
  */
 @Service(Service.Level.APP)
 @State(
@@ -28,92 +30,60 @@ import org.jetbrains.annotations.Nullable;
 )
 public final class TherapeuticDevSettings implements PersistentStateComponent<TherapeuticDevSettings> {
 
-    // ==================== DETECTION SETTINGS ====================
-    
-    /** Flow state threshold (0.0 - 1.0). Score >= this = FLOW state */
+    // ==================== DETECTION ====================
+
+    // these thresholds control sensitivity — higher flowThreshold means the
+    // developer needs a higher composite score to be classified as FLOW
     public double flowThreshold = 0.65;
-    
-    /** Procrastinating threshold. Score <= this = PROCRASTINATING state */
     public double procrastinatingThreshold = 0.35;
-    
-    /** Optimal keystrokes per minute for flow detection */
     public double optimalKpm = 80.0;
-    
-    // ==================== BREAK SETTINGS ====================
-    
-    /** Break suggestion interval in minutes */
+
+    // ==================== BREAKS ====================
+
+    // how long before suggesting a break, and whether to do it automatically
     public int breakIntervalMinutes = 60;
-    
-    /** Enable automatic break suggestions */
     public boolean autoBreakSuggestions = true;
-    
-    /** Minimum flow duration (minutes) before suggesting break */
     public int minFlowDurationForBreak = 30;
-    
-    // ==================== NOTIFICATION SETTINGS ====================
-    
-    /** Show break suggestions as modal dialog */
+
+    // ==================== NOTIFICATIONS ====================
+
+    // modal = BreakNotificationDialog, balloon = ide notification popup (not yet implemented)
     public boolean useModalNotifications = true;
-    
-    /** Show break suggestions as balloon notification */
     public boolean useBalloonNotifications = false;
-    
-    /** Show flow state in status bar */
     public boolean showStatusBarWidget = true;
-    
-    /** Play sound on break suggestion */
     public boolean playSoundOnBreak = false;
-    
-    // ==================== ACTIVITY VIEW SETTINGS ====================
-    
-    /** Enable activity heatmap view */
+
+    // ==================== ACTIVITY VIEW ====================
+
     public boolean enableActivityHeatmap = true;
-    
-    /** Track context switches */
     public boolean trackContextSwitches = true;
-    
-    /** Warning threshold for context switches per interval */
+
+    // how many file switches per interval before the activity tab highlights it as a warning
     public int contextSwitchWarningThreshold = 7;
-    
-    // ==================== GRAPH VIEW SETTINGS ====================
-    
-    /** Enable architecture graph view */
+
+    // ==================== GRAPH VIEW ====================
+
     public boolean enableGraphView = true;
-    
-    /** Auto-refresh graph on file changes */
     public boolean autoRefreshGraph = false;
-    
-    /** Show dependencies in graph */
     public boolean showDependencies = true;
-    
-    // ==================== DATA SETTINGS ====================
-    
-    /** Enable metric collection */
+
+    // ==================== DATA ====================
+
+    // master toggles for metric collection and sqlite persistence
+    // disabling collectMetrics stops all listener recording
+    // disabling persistSnapshots keeps live detection running but doesn't write to db
     public boolean collectMetrics = true;
-    
-    /** Store snapshots to database */
     public boolean persistSnapshots = true;
-    
-    // ==================== WEIGHT SETTINGS (Advanced) ====================
-    
-    /** Typing metric weight */
+
+    // ==================== WEIGHTS (advanced) ====================
+
+    // these mirror FlowDetector's defaults — exposed for future settings panel integration
     public double weightTyping = 0.30;
-    
-    /** Errors metric weight */
     public double weightErrors = 0.25;
-    
-    /** Focus metric weight */
     public double weightFocus = 0.20;
-    
-    /** Builds metric weight */
     public double weightBuilds = 0.15;
-    
-    /** Activity metric weight */
     public double weightActivity = 0.10;
 
-    /**
-     * Gets the singleton instance.
-     */
     public static TherapeuticDevSettings getInstance() {
         return ApplicationManager.getApplication().getService(TherapeuticDevSettings.class);
     }
@@ -129,33 +99,34 @@ public final class TherapeuticDevSettings implements PersistentStateComponent<Th
     }
 
     /**
-     * Resets all settings to defaults.
+     * resets everything to factory defaults.
+     * useful for testing or if a participant's settings get into a weird state.
      */
     public void resetToDefaults() {
         flowThreshold = 0.65;
         procrastinatingThreshold = 0.35;
         optimalKpm = 80.0;
-        
+
         breakIntervalMinutes = 60;
         autoBreakSuggestions = true;
         minFlowDurationForBreak = 30;
-        
+
         useModalNotifications = true;
         useBalloonNotifications = false;
         showStatusBarWidget = true;
         playSoundOnBreak = false;
-        
+
         enableActivityHeatmap = true;
         trackContextSwitches = true;
         contextSwitchWarningThreshold = 7;
-        
+
         enableGraphView = true;
         autoRefreshGraph = false;
         showDependencies = true;
-        
+
         collectMetrics = true;
         persistSnapshots = true;
-        
+
         weightTyping = 0.30;
         weightErrors = 0.25;
         weightFocus = 0.20;
@@ -164,7 +135,8 @@ public final class TherapeuticDevSettings implements PersistentStateComponent<Th
     }
 
     /**
-     * Validates that weights sum to 1.0.
+     * sanity check — if weights don't sum to 1.0 the composite score maths breaks.
+     * tolerance of 0.001 handles floating point imprecision.
      */
     public boolean areWeightsValid() {
         double sum = weightTyping + weightErrors + weightFocus + weightBuilds + weightActivity;

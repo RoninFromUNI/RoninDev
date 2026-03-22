@@ -1,11 +1,9 @@
 package com.ronin.therapeuticdev.ui.tabs;
 
 import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.*;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPanel;
@@ -20,25 +18,20 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Graph tab showing project architecture visualization.
+ * graph tab — visualises the project's class/package architecture.
  *
- * <p>Displays classes as nodes grouped by package, with dependency arrows.
- * Clicking a node navigates to that file in the editor.
+ * classes are rendered as nodes grouped by package, with colour-coded dashed
+ * borders per package (blue for services, purple for ui, green for listeners,
+ * amber for storage, etc.). clicking a node navigates to that file in the editor.
  *
- * <p>Layout (simplified example):
- * <pre>
- * ┌─────────────────────────────────────────┐
- * │  ╭─ services/ ─────╮  ╭─ ui/ ─────────╮│
- * │  │ MetricCollector │  │ FlowStatePanel││
- * │  │ FlowDetector    │→→│ StatusWidget  ││
- * │  ╰─────────────────╯  ╰───────────────╯│
- * │          ↑                              │
- * │  ╭─ listeners/ ────╮  ╭─ storage/ ────╮│
- * │  │ TypingListener  │  │ MetricRepo    ││
- * │  │ FileListener    │  │ SQLiteHelper  ││
- * │  ╰─────────────────╯  ╰───────────────╯│
- * └─────────────────────────────────────────┘
- * </pre>
+ * the canvas supports zoom (0.5x–2.0x) and a layout toggle between vertical
+ * (2-column grid, scrolls down) and horizontal (single row, scrolls right).
+ * preferred size is recalculated dynamically after each paint so the scroll pane
+ * knows the actual content bounds — without this, anything beyond the initial
+ * viewport size gets clipped with no scrollbar.
+ *
+ * the currently open file is highlighted with a white border so you can spot
+ * where you are in the architecture at a glance.
  */
 public class GraphTabPanel extends JBPanel<GraphTabPanel> {
 

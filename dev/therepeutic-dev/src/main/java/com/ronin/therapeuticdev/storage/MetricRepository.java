@@ -11,47 +11,53 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * SQLite persistence layer for flow metrics and detection results.
- * 
- * Stores:
- * - FlowMetrics snapshots (raw data for analysis)
- * - FlowDetectionResults (calculated scores and states)
- * - Manual flow state labels (for user study validation)
- * 
- * Database location: [IDE config dir]/therapeutic-dev/metrics.db
+ * sqlite persistence layer — everything the plugin records ends up here.
  *
- * @see <a href="https://www.sqlite.org/lang.html">SQLite Documentation</a>
+ * two tables:
+ *   snapshots      — one row per persist cycle (every 60s), containing all five
+ *                    sub-scores, composite tally, classified state, and raw metrics.
+ *                    this is the primary data source for the dissertation analysis.
+ *   esm_responses  — one row per ESM probe completion, containing the 7-item flow
+ *                    state scale ratings and optional qualitative notes.
+ *
+ * the database lives in intellij's plugin config directory so it persists across
+ * ide restarts but doesn't interfere with the user's project files. path is:
+ *   [ide config]/therapeutic-dev/metrics.db
+ *
+ * i use WAL journal mode for better concurrent read performance — the live refresh
+ * loop (every 2s) reads recent data for the sparkline while the persist cycle
+ * (every 60s) writes new rows. WAL prevents these from blocking each other.
+ *
+ * all queries use PreparedStatement with parameterised values. even though this
+ * is a local database with no untrusted input, parameterised queries are just
+ * good practice and prevent any possibility of sql injection if the code is
+ * ever reused in a different context.
  */
 public class MetricRepository {
 
     private static final Logger LOG = Logger.getInstance(MetricRepository.class);
     private static final String DB_NAME = "metrics.db";
-    
+
     private final String dbPath;
     private Connection connection;
 
     public MetricRepository() {
-        // Store in IDE's plugin config directory
         File pluginDir = new File(PathManager.getConfigPath(), "therapeutic-dev");
         if (!pluginDir.exists()) {
             pluginDir.mkdirs();
         }
         this.dbPath = new File(pluginDir, DB_NAME).getAbsolutePath();
-        
+
         initialize();
     }
 
-    /**
-     * Initializes database connection and creates tables if needed.
-     */
     private void initialize() {
         try {
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
-            // WAL mode: better concurrent read performance, no extra library needed
+            // WAL mode for concurrent read/write without blocking
             try (Statement s = connection.createStatement()) {
                 s.execute("PRAGMA journal_mode=WAL");
             }
@@ -63,7 +69,10 @@ public class MetricRepository {
     }
 
     /**
-     * Creates database tables if they don't exist.
+     * creates both tables and their indexes if they don't already exist.
+     * the esm_responses table has a foreign key reference to snapshots(id) so
+     * each self-report can be linked to the algorithmic classification that
+     * triggered it — that pairing is the core of the convergent validity analysis.
      */
     private void createTables() throws SQLException {
         String createSnapshotsTable = """
@@ -72,42 +81,42 @@ public class MetricRepository {
                 session_id TEXT NOT NULL,
                 timestamp TEXT NOT NULL,
                 
-                -- Typing metrics
+                -- typing metrics
                 keystrokes_per_minute REAL,
                 avg_key_interval_ms REAL,
                 backspace_count INTEGER,
                 keyboard_idle_ms INTEGER,
                 
-                -- Error metrics
+                -- error metrics
                 syntax_error_count INTEGER,
                 compilation_errors INTEGER,
                 time_since_last_error_ms INTEGER,
                 
-                -- Focus metrics
+                -- focus metrics
                 file_changes INTEGER,
                 time_in_current_file_ms INTEGER,
                 focus_loss_count INTEGER,
                 
-                -- Build metrics
+                -- build metrics
                 last_build_success INTEGER,
                 consecutive_failed_builds INTEGER,
                 time_since_last_build_ms INTEGER,
                 
-                -- Session
+                -- session
                 session_duration_ms INTEGER,
                 
-                -- Detection results
+                -- detection results (the algorithm's output)
                 flow_score REAL,
                 stress_level REAL,
                 flow_state TEXT,
                 
-                -- Manual label (for user study)
+                -- manual label for validation (participant self-report)
                 manual_label TEXT,
                 
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """;
-        
+
         String createEsmTable = """
             CREATE TABLE IF NOT EXISTS esm_responses (
                 id                      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,7 +124,7 @@ public class MetricRepository {
                 session_id              TEXT NOT NULL,
                 triggered_at            TEXT NOT NULL,
                 responded_at            TEXT,
-                -- 7-item Flow State Scale adapted for software development (1–5 Likert)
+                -- 7-item flow state scale (jackson & marsh 1996), 1–5 likert each
                 challenge_skill_balance INTEGER,
                 action_awareness_merging INTEGER,
                 clear_goals             INTEGER,
@@ -123,11 +132,11 @@ public class MetricRepository {
                 concentration           INTEGER,
                 sense_of_control        INTEGER,
                 autotelic_experience    INTEGER,
-                -- Composite
+                -- mean of non-null items
                 composite_esm_score     REAL,
-                -- Open text
+                -- optional free text from the participant
                 qualitative_note        TEXT,
-                -- AI context
+                -- ai context — was the participant using ai tools at probe time?
                 using_ai_tools          INTEGER,
                 ai_tool_name            TEXT,
                 created_at              TEXT DEFAULT CURRENT_TIMESTAMP
@@ -154,7 +163,9 @@ public class MetricRepository {
     }
 
     /**
-     * Saves a metrics snapshot with its detection result.
+     * persists a single snapshot — called once per minute from SnapshotScheduler's
+     * persist cycle. the session_id carries the participant prefix (e.g. P001_uuid)
+     * so per-participant queries are trivial.
      */
     public void saveSnapshot(FlowMetrics metrics, FlowDetectionResult result) {
         String sql = """
@@ -168,50 +179,46 @@ public class MetricRepository {
                 flow_score, stress_level, flow_state
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
-        
+
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, metrics.getSessionId());
             pstmt.setString(2, metrics.getTimestamp().toString());
-            
-            // Typing
+
             pstmt.setDouble(3, metrics.getKeystrokesPerMin());
             pstmt.setDouble(4, metrics.getAvgKeyIntervalMs());
             pstmt.setInt(5, metrics.getBackspaceCount());
             pstmt.setLong(6, metrics.getKeyboardIdleMs());
-            
-            // Errors
+
             pstmt.setInt(7, metrics.getSyntaxErrorCount());
             pstmt.setInt(8, metrics.getCompilationErrors());
             pstmt.setLong(9, metrics.getTimeSinceLastErrorMs());
-            
-            // Focus
+
             pstmt.setInt(10, metrics.getFileChangesLast5Min());
             pstmt.setLong(11, metrics.getTimeInCurrentFileMs());
             pstmt.setInt(12, metrics.getFocusLossCount());
-            
-            // Builds
+
             pstmt.setInt(13, metrics.isLastBuildSuccess() ? 1 : 0);
             pstmt.setInt(14, metrics.getConsecutiveFailedBuilds());
             pstmt.setLong(15, metrics.getTimeSinceLastBuildMs());
-            
-            // Session
+
             pstmt.setLong(16, metrics.getSessionDurationMs());
-            
-            // Detection results
+
             pstmt.setDouble(17, result.getFlowTally());
             pstmt.setDouble(18, result.getStressLevel());
             pstmt.setString(19, result.getState().name());
-            
+
             pstmt.executeUpdate();
-            
+
         } catch (SQLException e) {
             LOG.error("Failed to save snapshot", e);
         }
     }
 
     /**
-     * Saves a manual flow state label for validation.
-     * Used during user study when participant indicates their perceived state.
+     * updates the nearest snapshot with a participant's self-reported label.
+     * uses JULIANDAY distance to find the closest snapshot in time to the
+     * moment the participant indicated their state — not an exact match
+     * because the self-report and the snapshot won't land on the same millisecond.
      */
     public void saveManualLabel(String sessionId, Instant timestamp, String label) {
         String sql = """
@@ -225,7 +232,7 @@ public class MetricRepository {
                 LIMIT 1
             )
             """;
-        
+
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, label);
             pstmt.setString(2, sessionId);
@@ -237,51 +244,45 @@ public class MetricRepository {
         }
     }
 
-    /**
-     * Retrieves snapshots for a session.
-     */
     public List<SnapshotRecord> getSessionSnapshots(String sessionId) {
         List<SnapshotRecord> records = new ArrayList<>();
         String sql = "SELECT * FROM snapshots WHERE session_id = ? ORDER BY timestamp";
-        
+
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, sessionId);
             ResultSet rs = pstmt.executeQuery();
-            
             while (rs.next()) {
                 records.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
             LOG.error("Failed to retrieve session snapshots", e);
         }
-        
+
         return records;
     }
 
-    /**
-     * Retrieves all snapshots within a time range.
-     */
     public List<SnapshotRecord> getSnapshotsByTimeRange(Instant start, Instant end) {
         List<SnapshotRecord> records = new ArrayList<>();
         String sql = "SELECT * FROM snapshots WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp";
-        
+
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, start.toString());
             pstmt.setString(2, end.toString());
             ResultSet rs = pstmt.executeQuery();
-            
             while (rs.next()) {
                 records.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
             LOG.error("Failed to retrieve snapshots by time range", e);
         }
-        
+
         return records;
     }
 
     /**
-     * Exports all data to CSV for analysis.
+     * exports every snapshot as csv — this is the study data extraction method.
+     * called from the export button in TherapeuticDevConfigurable.
+     * column order matches the snapshots table schema exactly.
      */
     public String exportToCsv() {
         StringBuilder csv = new StringBuilder();
@@ -290,12 +291,12 @@ public class MetricRepository {
         csv.append("file_changes,time_in_file,focus_loss,");
         csv.append("build_success,failed_builds,time_since_build,");
         csv.append("session_duration,flow_score,stress_level,flow_state,manual_label\n");
-        
+
         String sql = "SELECT * FROM snapshots ORDER BY timestamp";
-        
+
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
+
             while (rs.next()) {
                 csv.append(String.format("%s,%s,%.2f,%.2f,%d,%d,",
                         rs.getString("session_id"),
@@ -304,22 +305,22 @@ public class MetricRepository {
                         rs.getDouble("avg_key_interval_ms"),
                         rs.getInt("backspace_count"),
                         rs.getLong("keyboard_idle_ms")));
-                
+
                 csv.append(String.format("%d,%d,%d,",
                         rs.getInt("syntax_error_count"),
                         rs.getInt("compilation_errors"),
                         rs.getLong("time_since_last_error_ms")));
-                
+
                 csv.append(String.format("%d,%d,%d,",
                         rs.getInt("file_changes"),
                         rs.getLong("time_in_current_file_ms"),
                         rs.getInt("focus_loss_count")));
-                
+
                 csv.append(String.format("%d,%d,%d,",
                         rs.getInt("last_build_success"),
                         rs.getInt("consecutive_failed_builds"),
                         rs.getLong("time_since_last_build_ms")));
-                
+
                 csv.append(String.format("%d,%.4f,%.4f,%s,%s\n",
                         rs.getLong("session_duration_ms"),
                         rs.getDouble("flow_score"),
@@ -330,13 +331,10 @@ public class MetricRepository {
         } catch (SQLException e) {
             LOG.error("Failed to export to CSV", e);
         }
-        
+
         return csv.toString();
     }
 
-    /**
-     * Maps a ResultSet row to a SnapshotRecord.
-     */
     private SnapshotRecord mapResultSet(ResultSet rs) throws SQLException {
         return new SnapshotRecord(
                 rs.getInt("id"),
@@ -350,13 +348,11 @@ public class MetricRepository {
     }
 
     /**
-     * Saves an ESM probe response, linking it to the most recent snapshot
-     * for the given session.
-     *
-     * @return the id of the inserted row, or -1 on failure
+     * saves an esm probe response, linking it to the most recent snapshot for
+     * this session. the link lets me pair the participant's subjective rating
+     * with the algorithm's classification at the same moment in time.
      */
     public long saveEsmResponse(EsmResponse r) {
-        // Resolve the latest snapshot id for this session
         long snapshotId = -1;
         try (PreparedStatement ps = connection.prepareStatement(
                 "SELECT id FROM snapshots WHERE session_id = ? ORDER BY timestamp DESC LIMIT 1")) {
@@ -402,9 +398,6 @@ public class MetricRepository {
         }
     }
 
-    /**
-     * Retrieves all ESM responses for a session, ordered chronologically.
-     */
     public List<EsmResponse> getEsmResponses(String sessionId) {
         List<EsmResponse> result = new ArrayList<>();
         String sql = "SELECT * FROM esm_responses WHERE session_id = ? ORDER BY triggered_at";
@@ -438,29 +431,27 @@ public class MetricRepository {
     // ==================== RECORDS ====================
 
     /**
-     * ESM probe response — 7-item Flow State Scale adapted for software development.
-     * All Likert items are Integer (nullable) to allow partial responses.
+     * esm probe response record — 7 likert items from the adapted flow state scale,
+     * plus ai usage context and optional qualitative note. all likert items are
+     * nullable Integer to allow partial responses (participant can skip items).
      */
     public record EsmResponse(
         String  sessionId,
         Instant triggeredAt,
         Instant respondedAt,
-        Integer challengeSkillBalance,   // "Challenge matches my skill level"
-        Integer actionAwarenessMerging,  // "Coding just happens — not thinking about how"
-        Integer clearGoals,              // "I know what I want to accomplish next"
-        Integer unambiguousFeedback,     // "I can tell whether I am coding well"
-        Integer concentration,           // "I am completely focused"
-        Integer senseOfControl,          // "I feel in control of what I am coding"
-        Integer autotelicExperience,     // "I am doing this for the enjoyment of programming"
-        Double  compositeEsmScore,       // mean of non-null items, computed by dialog
+        Integer challengeSkillBalance,
+        Integer actionAwarenessMerging,
+        Integer clearGoals,
+        Integer unambiguousFeedback,
+        Integer concentration,
+        Integer senseOfControl,
+        Integer autotelicExperience,
+        Double  compositeEsmScore,
         String  qualitativeNote,
         boolean usingAiTools,
         String  aiToolName
     ) {}
 
-    /**
-     * Closes the database connection.
-     */
     public void close() {
         try {
             if (connection != null && !connection.isClosed()) {
@@ -472,9 +463,6 @@ public class MetricRepository {
         }
     }
 
-    /**
-     * Simple record for snapshot query results.
-     */
     public record SnapshotRecord(
             int id,
             String sessionId,

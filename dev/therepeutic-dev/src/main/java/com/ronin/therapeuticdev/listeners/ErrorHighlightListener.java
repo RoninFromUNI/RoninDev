@@ -18,34 +18,26 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Tracks real-time syntax errors from IntelliJ's code analysis.
+ * tracks real-time syntax errors from intellij's daemon code analyzer.
  *
- * Syntax errors detected as you type indicate:
- * - Incomplete code (normal during active typing)
- * - Actual mistakes (potential flow disruption)
- * - Recovery patterns (errors clearing indicates progress)
+ * this gives me error data between builds — not just at compile time but as the
+ * developer types. error introduction and resolution patterns feed the error
+ * scoring category (25% weight) in FlowDetector.
  *
- * This provides real-time error feedback, complementing
- * build-time errors from {@link BuildListener}.
- *
- * Feeds the Errors metric category (25% weight) in FlowDetector.
- *
- * THREADING NOTE:
- * DaemonCodeAnalyzerImpl.getFileLevelHighlights() asserts EDT access,
- * and PSI operations (getPsiFile, getSelectedTextEditor) require a
- * read action. Since SnapshotScheduler calls recordCurrentErrors()
- * from a POOLED_THREAD alarm, we use invokeAndWait to bounce onto
- * the EDT where both requirements are satisfied.
+ * threading note that cost me a day to debug:
+ * DaemonCodeAnalyzerImpl.getFileLevelHighlights() throws an AssertionError if called
+ * off the EDT. since SnapshotScheduler's persist cycle runs on a POOLED_THREAD alarm,
+ * i have to bounce the error scan onto the EDT with invokeAndWait. this blocks the
+ * background thread until the EDT finishes, which is fine because:
+ *   - the persist cycle only runs once per minute
+ *   - the error scan just reads cached highlights (fast)
+ *   - i need the count synchronously before persisting the snapshot
  */
 public class ErrorHighlightListener {
 
     /**
-     * Counts current syntax errors in the active editor.
-     *
-     * MUST be called on the EDT — DaemonCodeAnalyzerImpl asserts this.
-     *
-     * @param project the current project
-     * @return count of ERROR-severity highlights in the current file
+     * counts ERROR-severity highlights in the active editor.
+     * MUST be called on the EDT — the daemon analyzer asserts this internally.
      */
     public static int countCurrentErrors(Project project) {
         if (project == null || project.isDisposed()) {
@@ -67,8 +59,7 @@ public class ErrorHighlightListener {
             return 0;
         }
 
-        // getFileLevelHighlights() asserts EDT — thats why this whole
-        // method needs to run on the event dispatch thread
+        // this is the call that requires EDT — getFileLevelHighlights asserts it
         DaemonCodeAnalyzerImpl analyzer = (DaemonCodeAnalyzerImpl)
                 DaemonCodeAnalyzer.getInstance(project);
 
@@ -85,19 +76,15 @@ public class ErrorHighlightListener {
     }
 
     /**
-     * Records current error count to MetricCollector.
-     * Called from SnapshotScheduler's persist cycle (background thread).
+     * called from SnapshotScheduler's persist cycle (background thread).
+     * bounces the actual error scan onto the EDT because of the threading
+     * constraint described above.
      *
-     * Since countCurrentErrors() touches the daemon analyzer and PSI,
-     * both of which require EDT access, we bounce the work onto the
-     * EDT with invokeAndWait. This blocks the calling background thread
-     * until the EDT finishes — which is fine because:
-     *   - the persist cycle only runs once per minute
-     *   - the error scan is fast (just reading cached highlights)
-     *   - we need the result synchronously before persisting the snapshot
+     * AtomicInteger passes the result out of the EDT runnable back to the
+     * calling background thread — it's the lightest way to cross that boundary.
      *
-     * using ModalityState.defaultModalityState() so it runs even if a
-     * modal dialog is open (unlikely during normal coding, but safe).
+     * using ModalityState.defaultModalityState() so the scan runs even if a
+     * modal dialog is open (unlikely during normal coding, but defensive).
      */
     public static void recordCurrentErrors() {
         MetricCollector collector = ApplicationManager.getApplication()
@@ -107,8 +94,6 @@ public class ErrorHighlightListener {
             return;
         }
 
-        // AtomicInteger lets us pass the result out of the EDT runnable
-        // back to the calling background thread
         AtomicInteger totalErrors = new AtomicInteger(0);
 
         try {
@@ -120,13 +105,13 @@ public class ErrorHighlightListener {
                 totalErrors.set(count);
             }, ModalityState.defaultModalityState());
         } catch (ProcessCanceledException e) {
-            // must rethrow — the platform needs this to propagate so the IDE
+            // must rethrow — the platform needs this to propagate so the ide
             // can properly cancel operations during shutdown or indexing.
             // swallowing this breaks the cancellation machinery.
             throw e;
         } catch (Exception e) {
-            // if the EDT call fails for any other reason (e.g. application
-            // shutting down), just record zero rather than crashing the persist cycle
+            // any other failure (e.g. ide shutting down): record zero
+            // rather than crashing the persist cycle
             totalErrors.set(0);
         }
 

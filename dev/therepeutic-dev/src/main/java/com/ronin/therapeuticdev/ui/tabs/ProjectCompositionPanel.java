@@ -15,8 +15,19 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Project tab showing a donut chart of file type composition,
- * similar to GitHub's language breakdown bar.
+ * donut chart showing the file type breakdown of the current project.
+ *
+ * scans the project's content roots asynchronously (SwingWorker) to avoid
+ * blocking the EDT on large projects. skips .git, build, out, node_modules,
+ * .idea, and gradle directories since those aren't developer-authored code.
+ *
+ * the donut is painted entirely with Graphics2D fillArc calls — no charting
+ * library needed. the hole in the centre shows the total file count. the legend
+ * below lists each extension with its count and percentage, colour-coded to
+ * match the donut segments.
+ *
+ * visually similar to github's language breakdown bar, which was the design
+ * reference i used when building this.
  */
 public class ProjectCompositionPanel extends JBPanel<ProjectCompositionPanel> {
 

@@ -12,10 +12,15 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 
 /**
- * Setup screen shown when no participant ID is configured.
+ * the first screen participants see — a centred card prompting for their ID.
  *
- * <p>Renders a centred card prompting the researcher / participant to enter
- * their ID before the main flow-state dashboard is displayed.
+ * this gates the entire plugin experience behind participant identification.
+ * once an ID is entered and confirmed, the onConfirmed callback fires which
+ * tells FlowStateToolWindowFactory to swap this panel out for the main dashboard.
+ *
+ * minimum ID length is 2 characters to prevent accidental empty submissions.
+ * the enter key also triggers confirmation so participants don't have to reach
+ * for the button.
  */
 public class ParticipantSetupPanel extends JBPanel<ParticipantSetupPanel> {
 

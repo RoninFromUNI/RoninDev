@@ -9,14 +9,12 @@ import com.ronin.therapeuticdev.services.ParticipantSession;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Factory for creating the Therapeutic Dev tool window.
+ * factory that intellij calls when the tool window is first accessed.
  *
- * <p>Registered in plugin.xml, instantiated by IntelliJ when
- * the tool window is first accessed. If no participant ID is set,
- * shows the setup screen first.
- *
- * @see <a href="https://plugins.jetbrains.com/docs/intellij/tool-windows.html">
- *      IntelliJ Platform SDK - Tool Windows</a>
+ * the key decision here: if no participant ID is set, i show ParticipantSetupPanel
+ * instead of the main dashboard. once the participant enters their ID, the setup
+ * panel's onConfirmed callback swaps in FlowStatePanel. this gating ensures every
+ * study session has a participant ID before any metrics start being namespaced.
  */
 public class FlowStateToolWindowFactory implements ToolWindowFactory {
 

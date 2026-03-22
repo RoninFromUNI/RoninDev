@@ -1,8 +1,15 @@
 package com.ronin.therapeuticdev.detection;
 
 /**
- * Immutable result object from FlowDetector analysis.
- * Contains individual category scores, weighted tally, and final state classification.
+ * immutable container for everything that comes out of a single detection cycle.
+ *
+ * i made this immutable on purpose — once FlowDetector produces a result, nothing
+ * downstream (UI, persistence, break manager) should be able to mutate it. this
+ * eliminates a whole class of concurrency bugs since the scheduler, UI timer, and
+ * persistence layer all hold references to the same result object.
+ *
+ * contains the five individual category scores, the weighted composite tally,
+ * the classified FlowState, and a derived stress level.
  */
 public class FlowDetectionResult {
 
@@ -35,19 +42,22 @@ public class FlowDetectionResult {
     }
 
     /**
-     * Derives stress level from error and focus scores.
-     * High errors + low focus = high stress.
+     * derives a stress proxy from the error and focus sub-scores.
+     * the idea: high errors combined with low focus suggests cognitive overload.
+     * i weight errors at 60% and focus loss at 40% because unresolved compilation
+     * errors are a stronger stress signal than occasional alt-tabs.
+     *
+     * this is a secondary metric — the primary classification comes from flowTally.
+     * i include it because the dissertation discussion benefits from having an
+     * independent stress measure to correlate against self-report data.
      */
     private double calculateStressLevel() {
-        // Inverse of error score (more errors = more stress)
         double errorStress = 1.0 - errorScore;
-        // Inverse of focus score (less focus = more stress)
         double focusStress = 1.0 - focusScore;
-        // Weight errors more heavily for stress calculation
         return (errorStress * 0.6) + (focusStress * 0.4);
     }
 
-    // Getters - using the names that other classes expect
+    // getters — no setters anywhere, immutability enforced by design
 
     public double getTypingScore() { return typingScore; }
     public double getErrorScore() { return errorScore; }
@@ -58,8 +68,9 @@ public class FlowDetectionResult {
     public double getStressLevel() { return stressLevel; }
 
     /**
-     * Returns the classified flow state.
-     * Named getState() to match BreakManager expectations.
+     * named getState() rather than getFlowState() because BreakManager and
+     * the status bar widget both call result.getState() — changing this would
+     * break two downstream consumers for no real benefit.
      */
     public FlowState getState() { return flowState; }
 
