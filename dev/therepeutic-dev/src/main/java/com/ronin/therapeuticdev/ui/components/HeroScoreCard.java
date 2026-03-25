@@ -26,7 +26,6 @@ import java.awt.*;
  */
 public class HeroScoreCard extends JBPanel<HeroScoreCard> {
 
-    // Colors
     private static final Color FLOW_GREEN = new Color(0x4C, 0xAF, 0x50);
     private static final Color NEUTRAL_AMBER = new Color(0xE5, 0xA8, 0x4B);
     private static final Color STRESS_RED = new Color(0xF4, 0x43, 0x36);
@@ -50,17 +49,14 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
         ));
         setPreferredSize(new Dimension(-1, JBUI.scale(115)));
 
-        // === CENTER: Score + Trend ===
         JBPanel<?> centerPanel = new JBPanel<>(new FlowLayout(FlowLayout.CENTER, 10, 0));
         centerPanel.setOpaque(false);
 
-        // Big score number
         scoreLabel = new JBLabel("0");
         scoreLabel.setFont(scoreLabel.getFont().deriveFont(Font.BOLD, 48f));
         scoreLabel.setForeground(JBColor.WHITE);
         centerPanel.add(scoreLabel);
 
-        // Trend indicator
         trendLabel = new JBLabel("");
         trendLabel.setFont(trendLabel.getFont().deriveFont(14f));
         trendLabel.setForeground(FLOW_GREEN);
@@ -68,7 +64,6 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
 
         add(centerPanel, BorderLayout.CENTER);
 
-        // === BOTTOM: State badge ===
         JBPanel<?> bottomPanel = new JBPanel<>(new FlowLayout(FlowLayout.CENTER));
         bottomPanel.setOpaque(false);
 
@@ -102,21 +97,13 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
         return badge;
     }
 
-    /**
-     * Updates the displayed score, state, and trend.
-     *
-     * @param score  flow score 0-100
-     * @param state  current flow state
-     * @param trend  trend value (positive = improving, negative = declining)
-     */
+    // score is 0–100, trend is positive (improving) or negative (declining)
     public void updateScore(int score, FlowState state, int trend) {
         this.currentScore = score;
         this.currentState = state;
 
-        // Update score
         scoreLabel.setText(String.valueOf(score));
 
-        // Update trend
         if (trend > 0) {
             trendLabel.setText("▲ +" + trend);
             trendLabel.setForeground(FLOW_GREEN);
@@ -127,26 +114,22 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
             trendLabel.setText("");
         }
 
-        // Update state badge + label colour
         stateLabel.setText(state.name());
         stateLabel.setForeground(getStateColor(state));
         stateBadge.repaint();
-
-        // Update score color based on state
         scoreLabel.setForeground(getStateColor(state));
     }
 
-    /** Maps all 7 FlowState values to display colours. */
     private Color getStateColor(FlowState state) {
         if (state == null) return NEUTRAL_AMBER;
         return switch (state) {
-            case DEEP_FLOW       -> new Color(0x27, 0xAE, 0x60); // deep emerald
+            case DEEP_FLOW       -> new Color(0x27, 0xAE, 0x60);
             case FLOW            -> FLOW_GREEN;
-            case EMERGING        -> new Color(0x82, 0xE0, 0xAA); // pale green
+            case EMERGING        -> new Color(0x82, 0xE0, 0xAA);
             case NEUTRAL         -> NEUTRAL_AMBER;
-            case DISRUPTED       -> new Color(0xE6, 0x7E, 0x22); // orange
+            case DISRUPTED       -> new Color(0xE6, 0x7E, 0x22);
             case PROCRASTINATING -> STRESS_RED;
-            case NOT_IN_FLOW     -> new Color(0x95, 0xA5, 0xA6); // slate
+            case NOT_IN_FLOW     -> new Color(0x95, 0xA5, 0xA6);
         };
     }
 
@@ -155,7 +138,6 @@ public class HeroScoreCard extends JBPanel<HeroScoreCard> {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Draw rounded background
         g2.setColor(getBackground());
         g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
 

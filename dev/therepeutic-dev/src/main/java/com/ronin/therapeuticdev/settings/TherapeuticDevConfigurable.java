@@ -7,9 +7,11 @@ import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.FormBuilder;
 import com.intellij.util.ui.JBUI;
+import com.ronin.therapeuticdev.services.ParticipantSession;
 import com.ronin.therapeuticdev.storage.MetricRepository;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
+import com.ronin.therapeuticdev.services.ParticipantSession;
 
 import javax.swing.*;
 import java.awt.*;
@@ -115,6 +117,9 @@ public class TherapeuticDevConfigurable implements Configurable {
         exportButton = new JButton("Export CSV");
         exportButton.addActionListener(e -> exportData());
 
+        JButton resetSessionButton = new JButton("Reset Participant Session");
+        resetSessionButton.addActionListener(e -> resetSession());
+
         // ==================== ASSEMBLE ====================
         // FormBuilder handles label alignment and consistent spacing across all sections
         mainPanel = FormBuilder.createFormBuilder()
@@ -151,6 +156,7 @@ public class TherapeuticDevConfigurable implements Configurable {
                 .addComponent(new JBLabel("Data"))
                 .addComponent(collectMetricsCheckbox)
                 .addComponent(exportButton)
+                .addComponent(resetSessionButton)
 
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
@@ -287,6 +293,27 @@ public class TherapeuticDevConfigurable implements Configurable {
                         "Export Error",
                         JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    private void resetSession()
+    {
+        int confirm = JOptionPane.showConfirmDialog(mainPanel, "THis clears the current participant ID. \nThe Setup panel will appear on next tool window open", "Reset session", JOptionPane.OK_CANCEL_OPTION);
+
+        if (confirm == JOptionPane.OK_OPTION)
+        {
+            //should clear participant state from all open projects
+            for  (com.intellij.openapi.project.Project project: com.intellij.openapi.project.ProjectManager.getInstance().getOpenProjects())
+            {
+                ParticipantSession session = project.getService(ParticipantSession.class);
+                if (session!=null)
+                {
+                    session.clearParticipant();
+                }
+            }
+
+            JOptionPane.showMessageDialog(mainPanel,"Session reset. reopen the therepeutic dev tool window to see the setup panel", "Reset Complete",
+            JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }

@@ -5,27 +5,19 @@ import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Synthetic validation suite for FlowDetector.
+ * synthetic validation for FlowDetector — proves the algorithm classifies correctly
+ * against known metric inputs before i collect real participant data.
  *
- * PURPOSE (dissertation Chapter 6.1):
- *   Establishes algorithm correctness against known metric sequences before
- *   empirical participant data is collected. Each test constructs a FlowMetrics
- *   snapshot with controlled inputs, asserts the expected FlowState classification,
- *   and verifies sub-score directionality.
+ * covers all seven FlowState classifications, boundary conditions, the error
+ * recovery bonus, focus penalty accumulation, build streak penalties, the early
+ * session guard (session < 60s), and stress level derivation.
  *
- * COVERAGE:
- *   - All seven FlowState classifications
- *   - Key boundary conditions (threshold edges)
- *   - Error recovery bonus logic
- *   - Focus penalty accumulation
- *   - Build streak penalties
- *   - Early session neutral return (contextScore < 60s guard)
- *   - Stress level derivation
+ * i'm writing about these in Chapter 6.1 of the dissertation as the first tier
+ * of evaluation. the second tier is the controlled debugging study with TaskFlow.
  *
- * REFERENCE:
- *   Weightings: Typing 0.30 | Errors 0.25 | Focus 0.20 | Builds 0.15 | Context 0.10
- *   Thresholds: DEEP_FLOW >= 0.80 | FLOW >= 0.65 | EMERGING >= 0.52 |
- *               NEUTRAL >= 0.40 | DISRUPTED >= 0.28 | PROCRASTINATING >= 0.15
+ * weights: typing 0.30, errors 0.25, focus 0.20, builds 0.15, context 0.10
+ * thresholds: DEEP_FLOW >= 0.80, FLOW >= 0.65, EMERGING >= 0.52,
+ *             NEUTRAL >= 0.40, DISRUPTED >= 0.28, PROCRASTINATING >= 0.15
  */
 @DisplayName("FlowDetector — Synthetic Validation Suite")
 class FlowDetectorSyntheticTest {
@@ -36,6 +28,8 @@ class FlowDetectorSyntheticTest {
     void setUp() {
         detector = new FlowDetector();
     }
+
+    // ── the happy path: all metrics firing on all cylinders ──
 
     @Test
     @DisplayName("SC-01 | Optimal steady-state coding → DEEP_FLOW")
@@ -66,20 +60,20 @@ class FlowDetectorSyntheticTest {
         FlowDetectionResult result = detector.detect(metrics);
 
         assertEquals(FlowState.DEEP_FLOW, result.getState(),
-                "Optimal metrics across all five categories must yield DEEP_FLOW");
+                "everything maxed out — if this isn't DEEP_FLOW the thresholds are wrong");
         assertTrue(result.getFlowTally() >= 0.80,
-                "Composite score must meet the 0.80 DEEP_FLOW threshold");
-        assertTrue(result.getTypingScore() >= 0.80,
-                "Typing sub-score should be high at optimal KPM");
-        assertTrue(result.getErrorScore() >= 0.90,
-                "Error sub-score should be near 1.0 with no errors and clean period");
-        assertTrue(result.getFocusScore() >= 0.90,
-                "Focus sub-score should be near 1.0 with minimal switching");
+                "composite should clear 0.80 comfortably here");
+        // sanity check the sub-scores too
+        assertTrue(result.getTypingScore() >= 0.80, "typing should be high at 80 kpm");
+        assertTrue(result.getErrorScore() >= 0.90, "zero errors + 15min clean streak");
+        assertTrue(result.getFocusScore() >= 0.90, "one file change, no focus loss");
     }
 
     @Test
-    @DisplayName("SC-02 | Good but imperfect coding session → FLOW")
+    @DisplayName("SC-02 | Good but imperfect session → FLOW")
     void sc02_goodSessionWithMinorNoise_shouldClassifyAsFlow() {
+        // this simulates what i'd expect from a solid 15-minute stretch
+        // with one syntax error and a single alt-tab
         FlowMetrics metrics = FlowMetrics.builder()
                 .keystrokesPerMin(65)
                 .backspaceCount(8)
@@ -105,15 +99,16 @@ class FlowDetectorSyntheticTest {
 
         FlowDetectionResult result = detector.detect(metrics);
 
-        assertEquals(FlowState.FLOW, result.getState(),
-                "Slightly imperfect but productive session must yield FLOW");
+        assertEquals(FlowState.FLOW, result.getState());
         assertTrue(result.getFlowTally() >= 0.65 && result.getFlowTally() < 0.80,
-                "Composite must sit within the FLOW band [0.65, 0.80)");
+                "should land in the FLOW band, got " + result.getFlowTally());
     }
 
     @Test
     @DisplayName("SC-03 | Re-engagement after distraction → EMERGING")
     void sc03_reengagementState_shouldClassifyAsEmerging() {
+        // the tricky zone — enough activity to be above NEUTRAL but
+        // too many file switches and errors to hit FLOW
         FlowMetrics metrics = FlowMetrics.builder()
                 .keystrokesPerMin(45)
                 .backspaceCount(12)
@@ -139,10 +134,8 @@ class FlowDetectorSyntheticTest {
 
         FlowDetectionResult result = detector.detect(metrics);
 
-        assertEquals(FlowState.EMERGING, result.getState(),
-                "Moderate engagement at tolerance boundaries must yield EMERGING");
-        assertTrue(result.getFlowTally() >= 0.52 && result.getFlowTally() < 0.65,
-                "Composite must sit within the EMERGING band [0.52, 0.65)");
+        assertEquals(FlowState.EMERGING, result.getState());
+        assertTrue(result.getFlowTally() >= 0.52 && result.getFlowTally() < 0.65);
     }
 
     @Test
@@ -173,14 +166,16 @@ class FlowDetectorSyntheticTest {
 
         FlowDetectionResult result = detector.detect(metrics);
 
+        // 8 file changes + 5 focus losses hammers the focus score here
         assertEquals(FlowState.NEUTRAL, result.getState(),
-                "Above-tolerance errors and switching with low KPM must yield NEUTRAL");
-        assertTrue(result.getFlowTally() >= 0.40 && result.getFlowTally() < 0.52,
-                "Composite must sit within the NEUTRAL band [0.40, 0.52)");
+                "too many switches and errors to be EMERGING, not bad enough for DISRUPTED");
+        assertTrue(result.getFlowTally() >= 0.40 && result.getFlowTally() < 0.52);
     }
 
+    // ── the downward spiral scenarios ──
+
     @Test
-    @DisplayName("SC-05 | Build failures + high error accumulation → DISRUPTED")
+    @DisplayName("SC-05 | Build failures + high errors → DISRUPTED")
     void sc05_buildFailuresHighErrors_shouldClassifyAsDisrupted() {
         FlowMetrics metrics = FlowMetrics.builder()
                 .keystrokesPerMin(18)
@@ -207,15 +202,16 @@ class FlowDetectorSyntheticTest {
 
         FlowDetectionResult result = detector.detect(metrics);
 
-        assertEquals(FlowState.DISRUPTED, result.getState(),
-                "Failed builds, error accumulation, and low KPM must yield DISRUPTED");
-        assertTrue(result.getFlowTally() >= 0.28 && result.getFlowTally() < 0.40,
-                "Composite must sit within the DISRUPTED band [0.28, 0.40)");
+        // 3 unresolved errors + 3 consecutive failed builds = pain
+        assertEquals(FlowState.DISRUPTED, result.getState());
+        assertTrue(result.getFlowTally() >= 0.28 && result.getFlowTally() < 0.40);
     }
 
     @Test
     @DisplayName("SC-06 | Near-zero output + excessive switching → PROCRASTINATING")
     void sc06_nearZeroOutputExcessiveSwitching_shouldClassifyAsProcrastinating() {
+        // i tuned these numbers to land just above NOT_IN_FLOW —
+        // 5 kpm is basically opening files and staring at them
         FlowMetrics metrics = FlowMetrics.builder()
                 .keystrokesPerMin(5)
                 .backspaceCount(2)
@@ -241,15 +237,16 @@ class FlowDetectorSyntheticTest {
 
         FlowDetectionResult result = detector.detect(metrics);
 
-        assertEquals(FlowState.PROCRASTINATING, result.getState(),
-                "Near-zero keystroke rate with max focus/switch penalties must yield PROCRASTINATING");
+        assertEquals(FlowState.PROCRASTINATING, result.getState());
         assertTrue(result.getFlowTally() >= 0.15 && result.getFlowTally() < 0.28,
-                "Composite must sit within the PROCRASTINATING band [0.15, 0.28)");
+                "should be above NOT_IN_FLOW but below DISRUPTED, got " + result.getFlowTally());
     }
 
     @Test
-    @DisplayName("SC-07 | Absolute minimum activity → NOT_IN_FLOW")
+    @DisplayName("SC-07 | Absolute minimum → NOT_IN_FLOW")
     void sc07_absoluteMinimumActivity_shouldClassifyAsNotInFlow() {
+        // worst possible scenario: zero keystrokes, 20 syntax errors, 15 focus losses,
+        // 10 consecutive failed builds. if this doesn't hit NOT_IN_FLOW something is broken
         FlowMetrics metrics = FlowMetrics.builder()
                 .keystrokesPerMin(0)
                 .backspaceCount(0)
@@ -275,67 +272,58 @@ class FlowDetectorSyntheticTest {
 
         FlowDetectionResult result = detector.detect(metrics);
 
-        assertEquals(FlowState.NOT_IN_FLOW, result.getState(),
-                "Absolute minimum inputs must yield NOT_IN_FLOW");
-        assertTrue(result.getFlowTally() < 0.15,
-                "Composite must fall below the 0.15 NOT_IN_FLOW threshold");
+        assertEquals(FlowState.NOT_IN_FLOW, result.getState());
+        assertTrue(result.getFlowTally() < 0.15);
     }
 
+    // ── specific algorithm behaviours i need to validate ──
+
     @Test
-    @DisplayName("SC-08 | Full error resolution → errorScore recovery bonus applied")
+    @DisplayName("SC-08 | Full error resolution → recovery bonus kicks in")
     void sc08_fullErrorResolution_shouldApplyRecoveryBonus() {
+        // baseline: no errors introduced or resolved
         FlowMetrics baseline = FlowMetrics.builder()
-                .keystrokesPerMin(60)
-                .backspaceCount(5)
-                .burstConsistency(0.80)
-                .errorsIntroduced(0)
-                .errorsResolved(0)
-                .syntaxErrorCount(0)
-                .compilationErrors(0)
+                .keystrokesPerMin(60).backspaceCount(5).burstConsistency(0.80)
+                .errorsIntroduced(0).errorsResolved(0)
+                .syntaxErrorCount(0).compilationErrors(0)
                 .timeSinceLastErrorMs(100_000L)
-                .fileChangesLast5Min(2)
-                .focusLossCount(1)
+                .fileChangesLast5Min(2).focusLossCount(1)
                 .timeInCurrentFileMs(200_000L)
-                .lastBuildSuccess(true)
-                .buildsInWindow(1)
-                .buildSuccessRate(1.0)
+                .lastBuildSuccess(true).buildsInWindow(1).buildSuccessRate(1.0)
                 .timeSinceLastBuildMs(100_000L)
-                .ideFocusPct(0.80)
-                .keyboardIdleMs(10_000L)
+                .ideFocusPct(0.80).keyboardIdleMs(10_000L)
                 .sessionDurationMs(900_000L)
                 .build();
 
+        // same metrics but 3 errors introduced AND all 3 resolved
+        // this should trigger the +0.10 recovery bonus in normaliseErrorScore
         FlowMetrics withRecovery = FlowMetrics.builder()
-                .keystrokesPerMin(60)
-                .backspaceCount(5)
-                .burstConsistency(0.80)
-                .errorsIntroduced(3)
-                .errorsResolved(3)
-                .syntaxErrorCount(0)
-                .compilationErrors(0)
+                .keystrokesPerMin(60).backspaceCount(5).burstConsistency(0.80)
+                .errorsIntroduced(3).errorsResolved(3)
+                .syntaxErrorCount(0).compilationErrors(0)
                 .timeSinceLastErrorMs(100_000L)
-                .fileChangesLast5Min(2)
-                .focusLossCount(1)
+                .fileChangesLast5Min(2).focusLossCount(1)
                 .timeInCurrentFileMs(200_000L)
-                .lastBuildSuccess(true)
-                .buildsInWindow(1)
-                .buildSuccessRate(1.0)
+                .lastBuildSuccess(true).buildsInWindow(1).buildSuccessRate(1.0)
                 .timeSinceLastBuildMs(100_000L)
-                .ideFocusPct(0.80)
-                .keyboardIdleMs(10_000L)
+                .ideFocusPct(0.80).keyboardIdleMs(10_000L)
                 .sessionDurationMs(900_000L)
                 .build();
 
         FlowDetectionResult baseResult     = detector.detect(baseline);
         FlowDetectionResult recoveryResult = detector.detect(withRecovery);
 
+        // recovery bonus should push the error score up (or at least equal)
         assertTrue(recoveryResult.getErrorScore() >= baseResult.getErrorScore(),
-                "Resolving all introduced errors must apply the +0.10 recovery bonus");
+                "resolving all introduced errors should apply the +0.10 bonus");
     }
 
     @Test
-    @DisplayName("SC-09 | Session < 60s → contextScore fixed at 0.5 (early-session guard)")
+    @DisplayName("SC-09 | Session < 60s → contextScore locks to 0.5")
     void sc09_earlySession_contextScoreShouldBeNeutral() {
+        // the early session guard in normaliseContextScore returns 0.5 when
+        // session < 60s, so ideFocusPct shouldn't affect the composite at all
+
         FlowMetrics earlyHighFocus = FlowMetrics.builder()
                 .keystrokesPerMin(70).backspaceCount(3).burstConsistency(0.90)
                 .syntaxErrorCount(0).compilationErrors(0)
@@ -347,7 +335,7 @@ class FlowDetectorSyntheticTest {
                 .timeSinceLastBuildMs(60_000L)
                 .ideFocusPct(1.0)
                 .aiSuggestionsAccepted(0).keyboardIdleMs(0L)
-                .sessionDurationMs(30_000L)
+                .sessionDurationMs(30_000L)  // 30 seconds
                 .build();
 
         FlowMetrics earlyLowFocus = FlowMetrics.builder()
@@ -359,20 +347,21 @@ class FlowDetectorSyntheticTest {
                 .timeInCurrentFileMs(200_000L)
                 .lastBuildSuccess(true).buildsInWindow(1).buildSuccessRate(1.0)
                 .timeSinceLastBuildMs(60_000L)
-                .ideFocusPct(0.0)
+                .ideFocusPct(0.0)            // completely unfocused
                 .aiSuggestionsAccepted(0).keyboardIdleMs(0L)
-                .sessionDurationMs(30_000L)
+                .sessionDurationMs(30_000L)  // same 30 seconds
                 .build();
 
         FlowDetectionResult highResult = detector.detect(earlyHighFocus);
         FlowDetectionResult lowResult  = detector.detect(earlyLowFocus);
 
+        // both should produce the same composite because context is fixed at 0.5
         assertEquals(highResult.getFlowTally(), lowResult.getFlowTally(), 0.001,
-                "ideFocusPct must not affect composite when session < 60s");
+                "ideFocusPct shouldn't matter when session is under 60 seconds");
     }
 
     @Test
-    @DisplayName("SC-10 | Stress level derivation — high vs low stress configurations")
+    @DisplayName("SC-10 | Stress level: high-error config vs low-error config")
     void sc10_stressLevelDerivation_shouldReflectErrorAndFocusInverse() {
         FlowMetrics highStress = FlowMetrics.builder()
                 .keystrokesPerMin(25).backspaceCount(15).burstConsistency(0.40)
@@ -404,16 +393,17 @@ class FlowDetectorSyntheticTest {
         FlowDetectionResult lowResult  = detector.detect(lowStress);
 
         assertTrue(highResult.getStressLevel() > lowResult.getStressLevel(),
-                "High-error/low-focus config must produce higher stressLevel");
-        assertTrue(highResult.getStressLevel() >= 0.0 && highResult.getStressLevel() <= 1.0,
-                "stressLevel must be bounded within [0.0, 1.0]");
-        assertTrue(lowResult.getStressLevel() >= 0.0 && lowResult.getStressLevel() <= 1.0,
-                "stressLevel must be bounded within [0.0, 1.0]");
+                "stress is derived from inverse of error + focus scores, so bad metrics = high stress");
+        // also make sure it's actually bounded
+        assertTrue(highResult.getStressLevel() <= 1.0 && lowResult.getStressLevel() >= 0.0);
     }
 
     @Test
-    @DisplayName("SC-11 | Composite at FLOW/EMERGING boundary → correct side classification")
+    @DisplayName("SC-11 | Right at the FLOW/EMERGING boundary")
     void sc11_flowEmergingBoundary_shouldClassifyCorrectly() {
+        // i spent ages tuning these values to land right on the 0.65 boundary.
+        // it should classify as one or the other — the point is it doesn't
+        // fall through to NEUTRAL or jump to DEEP_FLOW
         FlowMetrics nearFlowThreshold = FlowMetrics.builder()
                 .keystrokesPerMin(55).backspaceCount(6).burstConsistency(0.70)
                 .syntaxErrorCount(1).compilationErrors(0)
@@ -432,14 +422,16 @@ class FlowDetectorSyntheticTest {
 
         assertTrue(
                 result.getState() == FlowState.FLOW || result.getState() == FlowState.EMERGING,
-                "Near-threshold inputs must classify as FLOW or EMERGING. " +
-                "Actual: " + result.getState() + ", composite: " + result.getFlowTally()
+                "expected FLOW or EMERGING at the boundary, got " + result.getState()
+                        + " (composite: " + String.format("%.3f", result.getFlowTally()) + ")"
         );
     }
 
     @Test
-    @DisplayName("SC-12 | setWeights() mutation → composite scores reflect new weighting")
+    @DisplayName("SC-12 | setWeights() actually changes the output")
     void sc12_configurableWeights_shouldMutateComposite() {
+        // high typing score but terrible error score — then i flip the weights
+        // so errors matter more than typing. composite should drop.
         FlowMetrics goodTypingBadErrors = FlowMetrics.builder()
                 .keystrokesPerMin(80).backspaceCount(2).burstConsistency(0.90)
                 .syntaxErrorCount(8).compilationErrors(6)
@@ -455,11 +447,12 @@ class FlowDetectorSyntheticTest {
 
         double defaultComposite = detector.detect(goodTypingBadErrors).getFlowTally();
 
+        // now make errors worth 0.40 instead of 0.25, and typing only 0.10 instead of 0.30
         detector.setWeights(0.10, 0.40, 0.20, 0.15, 0.15);
         double invertedComposite = detector.detect(goodTypingBadErrors).getFlowTally();
 
         assertTrue(invertedComposite < defaultComposite,
-                "Increasing error weight when error score is low must decrease composite. " +
-                "Default: " + defaultComposite + ", Inverted: " + invertedComposite);
+                "bumping error weight when errors are bad should tank the composite. "
+                        + "default: " + defaultComposite + ", inverted: " + invertedComposite);
     }
 }

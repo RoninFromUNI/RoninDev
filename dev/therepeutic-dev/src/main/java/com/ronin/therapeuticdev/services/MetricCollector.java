@@ -10,13 +10,12 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.*;
 
 /**
- * Central service that collects and aggregates coding metrics in real-time.
+ * the central hub — every listener feeds raw events in here, and SnapshotScheduler
+ * pulls FlowMetrics snapshots out via snapshot().
  *
- * All listener classes feed raw events into this collector.
- * SnapshotScheduler calls {@link #snapshot()} periodically to produce a
- * FlowMetrics value object for the detection algorithm.
- *
- * Thread-safe: all shared state uses atomic types or ConcurrentLinkedDeque.
+ * all shared state uses AtomicInteger/AtomicLong/AtomicBoolean or ConcurrentLinkedDeque
+ * because the listeners fire on various threads (EDT, background, platform pool) while
+ * the scheduler reads on its POOLED_THREAD alarm. no synchronised blocks needed.
  */
 @Service(Service.Level.APP)
 public final class MetricCollector implements Disposable {

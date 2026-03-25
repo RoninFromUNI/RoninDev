@@ -6,9 +6,9 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="creative-portfolio" />
         <module name="dvsa-slot-checker" />
         <module name="portfolio-creative-webapp" />
-        <module name="creative-portfolio" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>

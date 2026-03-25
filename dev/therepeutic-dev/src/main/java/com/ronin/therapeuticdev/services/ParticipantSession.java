@@ -63,8 +63,11 @@ public class ParticipantSession implements PersistentStateComponent<ParticipantS
         return this;
     }
 
+
+
     @Override
     public void loadState(@NotNull ParticipantSession state) {
         XmlSerializerUtil.copyBean(state, this);
     }
+
 }

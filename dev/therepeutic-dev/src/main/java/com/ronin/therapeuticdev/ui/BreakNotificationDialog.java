@@ -38,25 +38,14 @@ public class BreakNotificationDialog extends DialogWrapper {
     private final long flowDurationMs;
     private final String triggerReason;
     private final BreakCallback callback;
-    
-    /**
-     * Callback interface for break dialog actions.
-     */
+
     public interface BreakCallback {
         void onTakeBreak();
         void onSnooze(int minutes);
         void onDismiss();
     }
 
-    /**
-     * Creates a break notification dialog.
-     *
-     * @param project        current project
-     * @param flowDurationMs how long the user has been in flow (milliseconds)
-     * @param triggerReason  why the break was suggested
-     * @param callback       callback for handling user actions
-     */
-    public BreakNotificationDialog(@Nullable Project project, 
+    public BreakNotificationDialog(@Nullable Project project,
                                    long flowDurationMs,
                                    String triggerReason,
                                    BreakCallback callback) {
@@ -64,9 +53,9 @@ public class BreakNotificationDialog extends DialogWrapper {
         this.flowDurationMs = flowDurationMs;
         this.triggerReason = triggerReason;
         this.callback = callback;
-        
+
         setTitle("Therapeutic Dev");
-        setModal(false); // Non-blocking
+        setModal(false);
         init();
     }
 
@@ -76,33 +65,30 @@ public class BreakNotificationDialog extends DialogWrapper {
         mainPanel.setBackground(JBColor.namedColor("Panel.background", new Color(0x2B, 0x2B, 0x2B)));
         mainPanel.setBorder(JBUI.Borders.empty(16));
         mainPanel.setPreferredSize(new Dimension(JBUI.scale(320), JBUI.scale(200)));
-        
-        // === HEADER ===
+
         JBLabel headerLabel = new JBLabel("Time for a break?");
         headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 18f));
         headerLabel.setForeground(JBColor.WHITE);
         headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
         headerLabel.setBorder(JBUI.Borders.emptyBottom(16));
-        
+
         mainPanel.add(headerLabel, BorderLayout.NORTH);
-        
-        // === STATS CARD ===
+
         JBPanel<?> statsCard = createStatsCard();
         mainPanel.add(statsCard, BorderLayout.CENTER);
-        
-        // === REASON TEXT ===
+
         JBLabel reasonLabel = new JBLabel("Suggested: " + triggerReason);
         reasonLabel.setFont(reasonLabel.getFont().deriveFont(11f));
         reasonLabel.setForeground(MUTED);
         reasonLabel.setHorizontalAlignment(SwingConstants.CENTER);
         reasonLabel.setBorder(JBUI.Borders.empty(12, 0, 0, 0));
-        
+
         JBPanel<?> bottomPanel = new JBPanel<>(new BorderLayout());
         bottomPanel.setOpaque(false);
         bottomPanel.add(reasonLabel, BorderLayout.NORTH);
-        
+
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
-        
+
         return mainPanel;
     }
 
@@ -113,33 +99,31 @@ public class BreakNotificationDialog extends DialogWrapper {
                 BorderFactory.createLineBorder(CARD_BORDER, 1),
                 JBUI.Borders.empty(16)
         ));
-        
-        // "You've been in flow for" text
+
         JBLabel descLabel = new JBLabel("You've been in flow for");
         descLabel.setFont(descLabel.getFont().deriveFont(12f));
         descLabel.setForeground(JBColor.namedColor("Label.foreground", new Color(0xA9, 0xB7, 0xC6)));
         descLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        // Duration display
+
         String duration = formatDuration(flowDurationMs);
         JBLabel durationLabel = new JBLabel(duration);
         durationLabel.setFont(durationLabel.getFont().deriveFont(Font.BOLD, 24f));
         durationLabel.setForeground(ACCENT);
         durationLabel.setHorizontalAlignment(SwingConstants.CENTER);
         durationLabel.setBorder(JBUI.Borders.emptyTop(8));
-        
+
         JBPanel<?> centerPanel = new JBPanel<>();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setOpaque(false);
-        
+
         descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         durationLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
+
         centerPanel.add(descLabel);
         centerPanel.add(durationLabel);
-        
+
         card.add(centerPanel, BorderLayout.CENTER);
-        
+
         return card;
     }
 
@@ -155,7 +139,7 @@ public class BreakNotificationDialog extends DialogWrapper {
     private String formatDuration(long durationMs) {
         long hours = TimeUnit.MILLISECONDS.toHours(durationMs);
         long minutes = TimeUnit.MILLISECONDS.toMinutes(durationMs) % 60;
-        
+
         if (hours > 0) {
             return String.format("%dh %02dm", hours, minutes);
         } else {
@@ -163,73 +147,47 @@ public class BreakNotificationDialog extends DialogWrapper {
         }
     }
 
-    /**
-     * "Take Break" action - primary button.
-     */
+    // resets flow tracking so the next break suggestion starts fresh
     private class TakeBreakAction extends DialogWrapperAction {
-        
         public TakeBreakAction() {
             super("Take Break");
             putValue(DEFAULT_ACTION, true);
         }
-        
+
         @Override
         protected void doAction(java.awt.event.ActionEvent e) {
-            if (callback != null) {
-                callback.onTakeBreak();
-            }
+            if (callback != null) callback.onTakeBreak();
             close(OK_EXIT_CODE);
         }
     }
 
-    /**
-     * "Snooze" action - delays the notification.
-     */
+    // delays the next notification by 15 minutes
     private class SnoozeAction extends DialogWrapperAction {
-        
-        public SnoozeAction() {
-            super("Snooze 15min");
-        }
-        
+        public SnoozeAction() { super("Snooze 15min"); }
+
         @Override
         protected void doAction(java.awt.event.ActionEvent e) {
-            if (callback != null) {
-                callback.onSnooze(15);
-            }
+            if (callback != null) callback.onSnooze(15);
             close(CANCEL_EXIT_CODE);
         }
     }
 
-    /**
-     * "Dismiss" action - ignores the suggestion.
-     */
+    // just closes, no state change
     private class DismissAction extends DialogWrapperAction {
-        
-        public DismissAction() {
-            super("Dismiss");
-        }
-        
+        public DismissAction() { super("Dismiss"); }
+
         @Override
         protected void doAction(java.awt.event.ActionEvent e) {
-            if (callback != null) {
-                callback.onDismiss();
-            }
+            if (callback != null) callback.onDismiss();
             close(CANCEL_EXIT_CODE);
         }
     }
 
-    /**
-     * Shows a break notification dialog.
-     *
-     * @param project        current project
-     * @param flowDurationMs flow duration in milliseconds
-     * @param reason         trigger reason
-     * @param callback       action callback
-     */
+    // convenience static method so callers don't have to deal with EDT dispatch
     public static void show(@Nullable Project project,
-                           long flowDurationMs,
-                           String reason,
-                           BreakCallback callback) {
+                            long flowDurationMs,
+                            String reason,
+                            BreakCallback callback) {
         SwingUtilities.invokeLater(() -> {
             BreakNotificationDialog dialog = new BreakNotificationDialog(
                     project, flowDurationMs, reason, callback);

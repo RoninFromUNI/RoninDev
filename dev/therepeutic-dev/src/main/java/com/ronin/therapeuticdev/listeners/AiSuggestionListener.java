@@ -13,27 +13,31 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 /**
- * Detects likely AI suggestion acceptances via a document-change heuristic.
+ * heuristic detector for ai suggestion acceptances (copilot, jetbrains ai, etc).
  *
- * A single DocumentEvent that adds ≥ 40 net characters is unlikely to be normal
- * typed input and is counted as an  AI acceptance (Copilot, JetBrains AI,
- * or paste). The metric is labelled heuristic in both the UI and exported data;
- * the ESM probe asks participants to self-report actual AI tool usage per interval.
+ * the idea: if a single DocumentEvent adds >= 40 net characters in one go, that's
+ * almost certainly not normal typing. it's either an ai completion acceptance or a
+ * paste, both of which are worth tracking. i label the metric as "heuristic" in
+ * both the ui and exported csv because it's not definitive — the esm probe asks
+ * participants to self-report actual ai tool usage so i have ground truth to
+ * compare this against in the analysis.
  *
- * Registered as an application-level EditorFactoryListener in plugin.xml.
- * Uses editorReleased to clean up document listeners and avoid memory leaks.
+ * registered as an application-level EditorFactoryListener in plugin.xml.
+ * i track which documents already have listeners via a ConcurrentHashMap so i
+ * don't double-register when multiple editors share the same document. cleanup
+ * happens in editorReleased to avoid memory leaks.
  */
 public class AiSuggestionListener implements EditorFactoryListener {
 
     private static final int AI_THRESHOLD_CHARS = 40;
 
-    /** Maps documents to their registered listener for proper cleanup. */
+    // tracks which documents already have a listener attached
     private final Map<Document, DocumentListener> listenerMap = new ConcurrentHashMap<>();
 
     @Override
     public void editorCreated(@NotNull EditorFactoryEvent event) {
         Document doc = event.getEditor().getDocument();
-        // One listener per document is sufficient — multiple editors may share the same doc
+        // multiple editors can share the same document, one listener is enough
         if (listenerMap.containsKey(doc)) return;
 
         DocumentListener listener = new DocumentListener() {

@@ -38,8 +38,7 @@ public class MetricsTabPanel extends JBPanel<MetricsTabPanel> {
         setLayout(new BorderLayout());
         setBackground(JBColor.namedColor("Panel.background", new Color(0x2B, 0x2B, 0x2B)));
         setBorder(JBUI.Borders.empty(8));
-        
-        // Card container
+
         JBPanel<?> card = new JBPanel<>();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(CARD_BG);
@@ -47,15 +46,13 @@ public class MetricsTabPanel extends JBPanel<MetricsTabPanel> {
                 BorderFactory.createLineBorder(CARD_BORDER, 1),
                 JBUI.Borders.empty(12)
         ));
-        
-        // Create metric bars
+
         typingBar = new MetricBar("⌨", "Typing", "30%");
         errorsBar = new MetricBar("⚠", "Errors", "25%");
         focusBar = new MetricBar("📁", "Focus", "20%");
         buildsBar = new MetricBar("🔨", "Builds", "15%");
         activityBar = new MetricBar("⚡", "Activity", "10%");
-        
-        // Add with separators
+
         card.add(typingBar);
         card.add(createSeparator());
         card.add(errorsBar);
@@ -65,10 +62,8 @@ public class MetricsTabPanel extends JBPanel<MetricsTabPanel> {
         card.add(buildsBar);
         card.add(createSeparator());
         card.add(activityBar);
-        
+
         add(card, BorderLayout.NORTH);
-        
-        // Fill remaining space
         add(Box.createVerticalGlue(), BorderLayout.CENTER);
     }
 
@@ -79,16 +74,8 @@ public class MetricsTabPanel extends JBPanel<MetricsTabPanel> {
         return sep;
     }
 
-    /**
-     * Updates all metric scores.
-     * 
-     * @param typing   typing score (0.0 - 1.0)
-     * @param errors   error score (0.0 - 1.0)
-     * @param focus    focus score (0.0 - 1.0)
-     * @param builds   build score (0.0 - 1.0)
-     * @param activity activity score (0.0 - 1.0)
-     */
-    public void updateMetrics(double typing, double errors, double focus, 
+    // all five scores are 0.0 to 1.0, matching FlowDetectionResult's sub-scores
+    public void updateMetrics(double typing, double errors, double focus,
                               double builds, double activity) {
         typingBar.setScore(typing);
         errorsBar.setScore(errors);
