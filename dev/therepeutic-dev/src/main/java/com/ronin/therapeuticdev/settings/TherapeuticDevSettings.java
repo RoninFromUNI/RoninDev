@@ -14,14 +14,14 @@ import org.jetbrains.annotations.Nullable;
  *
  * i made every field public because PersistentStateComponent serialises via
  * XmlSerializerUtil which needs direct field access. using private fields with
- * getters/setters would require explicit xml annotations for no real benefit
+ * getters/setters would need explicit xml annotations for no real benefit
  * in a single-developer plugin.
  *
- * the weight fields (weightTyping, weightErrors, etc.) mirror the defaults in
+ * the weight fields (weightTyping, weightErrors, etc.) help to kinda mirror the defaults in
  * FlowDetector. they're exposed here so the settings panel could eventually let
- * users adjust them, but right now FlowDetector uses its own internal defaults.
- * connecting these to FlowDetector's setWeights() is a post-study task — i don't
- * want participants accidentally changing algorithm weights during the study.
+ * users adjust them, but right now FlowDetector uses its own internal defaults AS INTENDED.
+ * connecting these to FlowDetector's setWeights() is a post-study task, i really really don't
+ * want participants accidentally changing algorithm weights during the study, and it should stay fixed.
  */
 @Service(Service.Level.APP)
 @State(
@@ -30,22 +30,21 @@ import org.jetbrains.annotations.Nullable;
 )
 public final class TherapeuticDevSettings implements PersistentStateComponent<TherapeuticDevSettings> {
 
-    // ==================== DETECTION ====================
-
+    // THEREPEUTIC DEV : DETECTION
     // these thresholds control sensitivity — higher flowThreshold means the
     // developer needs a higher composite score to be classified as FLOW
     public double flowThreshold = 0.65;
     public double procrastinatingThreshold = 0.35;
     public double optimalKpm = 80.0;
 
-    // ==================== BREAKS ====================
+    // THEREPEUTIC DEV : BREAKS
 
     // how long before suggesting a break, and whether to do it automatically
     public int breakIntervalMinutes = 60;
     public boolean autoBreakSuggestions = true;
     public int minFlowDurationForBreak = 30;
 
-    // ==================== NOTIFICATIONS ====================
+    // THEREPEUTIC DEV : NOTIFICATIONS
 
     // modal = BreakNotificationDialog, balloon = ide notification popup (not yet implemented)
     public boolean useModalNotifications = true;
@@ -53,7 +52,7 @@ public final class TherapeuticDevSettings implements PersistentStateComponent<Th
     public boolean showStatusBarWidget = true;
     public boolean playSoundOnBreak = false;
 
-    // ==================== ACTIVITY VIEW ====================
+    // THEREPEUTIC DEV : ACTIVITY VIEW
 
     public boolean enableActivityHeatmap = true;
     public boolean trackContextSwitches = true;
@@ -61,13 +60,13 @@ public final class TherapeuticDevSettings implements PersistentStateComponent<Th
     // how many file switches per interval before the activity tab highlights it as a warning
     public int contextSwitchWarningThreshold = 7;
 
-    // ==================== GRAPH VIEW ====================
+    // THEREPEUTIC DEV : GRAPH VIEW
 
     public boolean enableGraphView = true;
     public boolean autoRefreshGraph = false;
     public boolean showDependencies = true;
 
-    // ==================== DATA ====================
+    // THEREPEUTIC DEV : DATA
 
     // master toggles for metric collection and sqlite persistence
     // disabling collectMetrics stops all listener recording
@@ -75,7 +74,7 @@ public final class TherapeuticDevSettings implements PersistentStateComponent<Th
     public boolean collectMetrics = true;
     public boolean persistSnapshots = true;
 
-    // ==================== WEIGHTS (advanced) ====================
+    // THEREPEUTIC DEV : WEIGHTS...but advanced
 
     // these mirror FlowDetector's defaults — exposed for future settings panel integration
     public double weightTyping = 0.30;
@@ -100,7 +99,7 @@ public final class TherapeuticDevSettings implements PersistentStateComponent<Th
 
     /**
      * resets everything to factory defaults.
-     * useful for testing or if a participant's settings get into a weird state.
+     * i deem it useful for testing or if a participant's settings get into a weird state.
      */
     public void resetToDefaults() {
         flowThreshold = 0.65;
@@ -135,7 +134,7 @@ public final class TherapeuticDevSettings implements PersistentStateComponent<Th
     }
 
     /**
-     * sanity check — if weights don't sum to 1.0 the composite score maths breaks.
+     * good ol sanity check - if weights don't sum to 1.0 the composite score maths breaks.
      * tolerance of 0.001 handles floating point imprecision.
      */
     public boolean areWeightsValid() {

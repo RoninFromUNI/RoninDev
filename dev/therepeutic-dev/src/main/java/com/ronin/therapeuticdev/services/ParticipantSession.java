@@ -14,6 +14,10 @@ import org.jetbrains.annotations.NotNull;
  * single string that survives restarts. the @State annotation tells intellij to
  * serialise this to therapeutic-dev-participant.xml in the config directory.
  *
+ * THE REASON why i use the word persist alot because i need a buzzword to just explain the ability
+ * to write data to a drable storage that even survives termination. i dont want to say save which means generic
+ * or store or write. thats my justification.
+ *
  * the participant ID serves two purposes:
  *   1. it gates the tool window — FlowStateToolWindowFactory checks hasParticipant()
  *      and shows ParticipantSetupPanel if no ID is set

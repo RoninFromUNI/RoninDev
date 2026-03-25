@@ -163,9 +163,10 @@ public class MetricRepository {
     }
 
     /**
-     * persists a single snapshot — called once per minute from SnapshotScheduler's
-     * persist cycle. the session_id carries the participant prefix (e.g. P001_uuid)
-     * so per-participant queries are trivial.
+     * persists a single snapshot:
+     * called once per minute from SnapshotScheduler's
+     * persist cycle. the session_id carries the needed participant prefix (e.g. P001_uuid)
+     * so per-participant queries are pretty trivial.
      */
     public void saveSnapshot(FlowMetrics metrics, FlowDetectionResult result) {
         String sql = """
@@ -217,7 +218,7 @@ public class MetricRepository {
     /**
      * updates the nearest snapshot with a participant's self-reported label.
      * uses JULIANDAY distance to find the closest snapshot in time to the
-     * moment the participant indicated their state — not an exact match
+     * moment the participant indicated their state so its not an exact match
      * because the self-report and the snapshot won't land on the same millisecond.
      */
     public void saveManualLabel(String sessionId, Instant timestamp, String label) {
@@ -280,7 +281,7 @@ public class MetricRepository {
     }
 
     /**
-     * exports every snapshot as csv — this is the study data extraction method.
+     * exports every snapshot as csv (which is so frickin needed) this is the study data extraction method.
      * called from the export button in TherapeuticDevConfigurable.
      * column order matches the snapshots table schema exactly.
      */
@@ -390,8 +391,15 @@ public class MetricRepository {
             pstmt.setObject(14, r.usingAiTools() ? 1 : 0);
             pstmt.setString(15, r.aiToolName());
             pstmt.executeUpdate();
-            ResultSet keys = pstmt.getGeneratedKeys();
-            return keys.next() ? keys.getLong(1) : -1;
+//            ResultSet keys = pstmt.getGeneratedKeys();
+//            return keys.next() ? keys.getLong(1) : -1;
+            // yeah having errors with using this so going back to another native equivaent
+            // which is last insert row id
+            //this shouldnt give any implenetation error this time around.
+            try (Statement rowIdStmt = connection.createStatement();
+                 ResultSet keys = rowIdStmt.executeQuery("SELECT last_insert_rowid()")) {
+                return keys.next() ? keys.getLong(1) : -1;
+            }
         } catch (SQLException e) {
             LOG.error("Failed to save ESM response", e);
             return -1;

@@ -15,13 +15,13 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * the settings panel — accessible via Settings > Tools > Therapeutic Dev.
+ * the settings panel which is accessible via Settings > Tools > Therapeutic Dev.
  *
  * i use intellij's Configurable interface which gives me the standard apply/reset/
  * isModified lifecycle for free. the panel is built with FormBuilder which handles
  * label alignment and spacing automatically so it looks native.
  *
- * the export button at the bottom is the study data extraction point — it pulls
+ * the export button at the bottom is the study data extraction point andddd it pulls
  * all snapshots from MetricRepository.exportToCsv() and writes to a user-chosen
  * file path. this is how i get participant data out of the plugin for analysis.
  */

@@ -160,7 +160,7 @@ public final class SnapshotScheduler implements Disposable {
         }, PERSIST_INTERVAL_MS);
     }
 
-    // ── core logic (the actual work — unchanged from before) ─────────
+    // ── core logic (the actual work which is unchanged from before) ─────────
 
     /**
      * lightweight cycle: snapshot current metrics, run detection, push to UI.
@@ -202,9 +202,9 @@ public final class SnapshotScheduler implements Disposable {
      * heavy cycle: the expensive one that runs every 60 seconds.
      *
      * order matters here:
-     *   1. refresh error count (scans all open files — expensive, hence once per minute)
+     *   1. refresh error count (scans all open files which is too frickin expensive, hence once per minute)
      *   2. snapshot + detect with fresh error data
-     *   3. persist if enabled — MUST happen BEFORE counter reset so interval
+     *   3. persist if enabled and MUST happen BEFORE counter reset so interval
      *      values (file switches, focus losses, compile errors) are captured
      *   4. reset interval counters so next minute starts clean
      *   5. check if an ESM probe should fire
