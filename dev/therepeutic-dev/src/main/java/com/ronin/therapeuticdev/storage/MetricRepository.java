@@ -336,6 +336,59 @@ public class MetricRepository {
         return csv.toString();
     }
 
+    public String exportEsmToCsv() {
+        StringBuilder csv = new StringBuilder();
+        csv.append("session_id,snapshot_id,triggered_at,responded_at,");
+        csv.append("challenge_skill_balance,action_awareness_merging,clear_goals,");
+        csv.append("unambiguous_feedback,concentration,sense_of_control,");
+        csv.append("autotelic_experience,composite_esm_score,");
+        csv.append("qualitative_note,using_ai_tools,ai_tool_name\n");
+
+        String sql = "SELECT * FROM esm_responses ORDER BY triggered_at";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                csv.append(String.format("%s,%d,%s,%s,",
+                        rs.getString("session_id"),
+                        rs.getLong("snapshot_id"),
+                        rs.getString("triggered_at"),
+                        rs.getString("responded_at") != null ? rs.getString("responded_at") : ""));
+
+                csv.append(String.format("%s,%s,%s,%s,%s,%s,%s,",
+                        formatNullableInt(rs, "challenge_skill_balance"),
+                        formatNullableInt(rs, "action_awareness_merging"),
+                        formatNullableInt(rs, "clear_goals"),
+                        formatNullableInt(rs, "unambiguous_feedback"),
+                        formatNullableInt(rs, "concentration"),
+                        formatNullableInt(rs, "sense_of_control"),
+                        formatNullableInt(rs, "autotelic_experience")));
+
+                double comp = rs.getDouble("composite_esm_score");
+                csv.append(rs.wasNull() ? "," : String.format("%.2f,", comp));
+
+                String note = rs.getString("qualitative_note");
+                csv.append(note != null
+                        ? "\"" + note.replace("\"", "\"\"").replace("\n", " ").replace("\r", "") + "\""
+                        : "");
+                csv.append(",");
+
+                csv.append(String.format("%d,%s\n",
+                        rs.getInt("using_ai_tools"),
+                        rs.getString("ai_tool_name") != null ? rs.getString("ai_tool_name") : ""));
+            }
+        } catch (SQLException e) {
+            LOG.error("Failed to export ESM responses to CSV", e);
+        }
+
+        return csv.toString();
+    }
+
+    private String formatNullableInt(ResultSet rs, String column) throws SQLException {
+        int val = rs.getInt(column);
+        return rs.wasNull() ? "" : String.valueOf(val);
+    }
+
     private SnapshotRecord mapResultSet(ResultSet rs) throws SQLException {
         return new SnapshotRecord(
                 rs.getInt("id"),

@@ -11,7 +11,7 @@ import com.ronin.therapeuticdev.services.ParticipantSession;
 import com.ronin.therapeuticdev.storage.MetricRepository;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
-import com.ronin.therapeuticdev.services.ParticipantSession;
+
 
 import javax.swing.*;
 import java.awt.*;
@@ -279,41 +279,57 @@ public class TherapeuticDevConfigurable implements Configurable {
 
             MetricRepository repo = ApplicationManager.getApplication()
                     .getService(MetricRepository.class);
-            String csvContent = repo.exportToCsv();
 
+            // snapshot export (existing behaviour)
+            String csvContent = repo.exportToCsv();
             try (java.io.FileWriter writer = new java.io.FileWriter(fileToSave)) {
                 writer.write(csvContent);
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Exported successfully to:\n" + fileToSave.getAbsolutePath(),
-                        "Export Complete",
-                        JOptionPane.INFORMATION_MESSAGE);
             } catch (java.io.IOException ex) {
                 JOptionPane.showMessageDialog(mainPanel,
                         "Export failed: " + ex.getMessage(),
                         "Export Error",
                         JOptionPane.ERROR_MESSAGE);
+                return;
             }
+
+            // esm export — sits alongside the snapshot csv with a suffixed filename
+            String baseName = fileToSave.getAbsolutePath();
+            String esmPath = baseName.endsWith(".csv")
+                    ? baseName.substring(0, baseName.length() - 4) + "-esm.csv"
+                    : baseName + "-esm.csv";
+
+            String esmContent = repo.exportEsmToCsv();
+            try (java.io.FileWriter writer = new java.io.FileWriter(esmPath)) {
+                writer.write(esmContent);
+            } catch (java.io.IOException ex) {
+                JOptionPane.showMessageDialog(mainPanel,
+                        "Snapshot CSV exported but ESM export failed: " + ex.getMessage(),
+                        "Partial Export",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            JOptionPane.showMessageDialog(mainPanel,
+                    "Exported successfully:\n" + fileToSave.getAbsolutePath()
+                            + "\n" + esmPath,
+                    "Export Complete",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
-    private void resetSession()
-    {
-        int confirm = JOptionPane.showConfirmDialog(mainPanel, "THis clears the current participant ID. \nThe Setup panel will appear on next tool window open", "Reset session", JOptionPane.OK_CANCEL_OPTION);
+    private void resetSession() {
+        int confirm = JOptionPane.showConfirmDialog(mainPanel,
+                "This clears the current participant ID.\nThe setup panel will appear on next tool window open.",
+                "Reset Session",
+                JOptionPane.OK_CANCEL_OPTION);
 
-        if (confirm == JOptionPane.OK_OPTION)
-        {
-            //should clear participant state from all open projects
-            for  (com.intellij.openapi.project.Project project: com.intellij.openapi.project.ProjectManager.getInstance().getOpenProjects())
-            {
-                ParticipantSession session = project.getService(ParticipantSession.class);
-                if (session!=null)
-                {
-                    session.clearParticipant();
-                }
-            }
+        if (confirm == JOptionPane.OK_OPTION) {
+            ParticipantSession.getInstance().clearParticipant();
 
-            JOptionPane.showMessageDialog(mainPanel,"Session reset. reopen the therepeutic dev tool window to see the setup panel", "Reset Complete",
-            JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(mainPanel,
+                    "Session reset. Reopen the Therapeutic Dev tool window to see the setup panel.",
+                    "Reset Complete",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }
