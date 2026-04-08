@@ -16,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 
-/**
+/**So
  * the settings panel which is accessible via Settings > Tools > Therapeutic Dev.
  *
  * i use intellij's Configurable interface which gives me the standard apply/reset/
